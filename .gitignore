@@ -10,3 +10,6 @@ build/
 .DS_Store
 .supermemory/
 .claimspilot-state/
+
+# Rust contract build output
+contracts/**/target/

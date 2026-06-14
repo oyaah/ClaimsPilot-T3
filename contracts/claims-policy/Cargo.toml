@@ -2,14 +2,22 @@
 name = "claims-policy"
 version = "0.1.0"
 edition = "2021"
+description = "ClaimsPilot protected claim-decision contract for Terminal 3 / T3N (policy-only, carries no PII)"
+license = "MIT"
+publish = false
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+# cdylib => wasm32-wasip2 emits a WASM *component* T3N can inspect and register.
+# lib    => keeps the pure policy module natively unit-testable.
+crate-type = ["cdylib", "lib"]
 
 [dependencies]
+wit-bindgen = { version = "0.49", default-features = false, features = ["macros", "realloc"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
-[dev-dependencies]
-claims-policy = { path = "." }
-
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true

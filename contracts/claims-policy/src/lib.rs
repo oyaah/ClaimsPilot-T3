@@ -1,119 +1,63 @@
-use serde::{Deserialize, Serialize};
+//! claims-policy — ClaimsPilot protected claim-decision contract for T3N.
+//!
+//! Policy-only: the contract decides allow / deny / needs-escalation for a
+//! claim against the caller's delegated grant. It carries NO claimant PII —
+//! the input is the sanitized policy envelope only (see `policy::ClaimInput`).
+//! The PII-bearing insurer call is a later milestone that uses
+//! `host:interfaces/http-with-placeholders` so plaintext PII is resolved inside
+//! the TEE and never enters WASM memory.
+//!
+//! Build the WASM component:
+//! ```text
+//! rustup target add wasm32-wasip2
+//! cargo build --target wasm32-wasip2 --release
+//! # => target/wasm32-wasip2/release/claims_policy.wasm
+//! ```
+//!
+//! Native unit tests (host target) still run with `cargo test`.
+#![cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ClaimInput {
-    pub claim_id: String,
-    pub agent_did: String,
-    pub grant_agent_did: String,
-    pub claim_type: String,
-    pub region: String,
-    pub amount_usd: u64,
-    pub max_amount_usd: u64,
-    pub policy_active: bool,
-    pub identity_verified: bool,
-    pub host_allowed: bool,
-    pub replayed_nonce: bool,
+pub mod policy;
+
+pub use policy::{evaluate_claim, ClaimDecision, ClaimInput};
+
+/// Must match `Cargo.toml` `version` and the registration script's semver.
+pub const CONTRACT_VERSION: &str = "0.1.0";
+
+wit_bindgen::generate!({
+    world: "claims-policy",
+    path: "wit",
+    generate_all,
+});
+
+struct Component;
+
+#[cfg(target_arch = "wasm32")]
+impl exports::claimspilot::claims_policy::contracts::Guest for Component {
+    fn evaluate_claim(
+        req: exports::claimspilot::claims_policy::contracts::GenericInput,
+    ) -> Result<Vec<u8>, String> {
+        let input = req
+            .input
+            .ok_or_else(|| "evaluate-claim: missing input".to_string())?;
+        let claim: policy::ClaimInput = serde_json::from_slice(&input)
+            .map_err(|e| format!("evaluate-claim: bad input: {e}"))?;
+        let decision = policy::evaluate_claim(&claim);
+        serde_json::to_vec(&decision).map_err(|e| e.to_string())
+    }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum Decision {
-    Approved,
-    Denied,
-    NeedsEscalation,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum DenialReason {
-    AgentNotAuthorized,
-    AmountOverLimit,
-    PolicyInactive,
-    IdentityNotVerified,
-    HostNotAllowed,
-    ReplayRejected,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ClaimDecision {
-    pub decision: Decision,
-    pub reasons: Vec<DenialReason>,
-}
-
-pub fn evaluate_claim(input: &ClaimInput) -> ClaimDecision {
-    let mut reasons = Vec::new();
-
-    if input.agent_did != input.grant_agent_did {
-        reasons.push(DenialReason::AgentNotAuthorized);
-    }
-    if input.amount_usd > input.max_amount_usd {
-        reasons.push(DenialReason::AmountOverLimit);
-    }
-    if !input.policy_active {
-        reasons.push(DenialReason::PolicyInactive);
-    }
-    if !input.identity_verified {
-        reasons.push(DenialReason::IdentityNotVerified);
-    }
-    if !input.host_allowed {
-        reasons.push(DenialReason::HostNotAllowed);
-    }
-    if input.replayed_nonce {
-        reasons.push(DenialReason::ReplayRejected);
-    }
-
-    let decision = if reasons.is_empty() {
-        Decision::Approved
-    } else if reasons.contains(&DenialReason::AmountOverLimit) {
-        Decision::NeedsEscalation
-    } else {
-        Decision::Denied
-    };
-
-    ClaimDecision { decision, reasons }
-}
+#[cfg(target_arch = "wasm32")]
+export!(Component);
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    fn valid_input() -> ClaimInput {
-        ClaimInput {
-            claim_id: "CLM-104".to_string(),
-            agent_did: "did:t3n:agent".to_string(),
-            grant_agent_did: "did:t3n:agent".to_string(),
-            claim_type: "phone_damage".to_string(),
-            region: "US-CA".to_string(),
-            amount_usd: 420,
-            max_amount_usd: 750,
-            policy_active: true,
-            identity_verified: true,
-            host_allowed: true,
-            replayed_nonce: false,
-        }
-    }
+    use super::CONTRACT_VERSION;
 
     #[test]
-    fn approves_valid_claim() {
-        let decision = evaluate_claim(&valid_input());
-        assert_eq!(decision.decision, Decision::Approved);
-        assert!(decision.reasons.is_empty());
-    }
-
-    #[test]
-    fn requires_escalation_over_limit() {
-        let mut input = valid_input();
-        input.amount_usd = 4800;
-        let decision = evaluate_claim(&input);
-        assert_eq!(decision.decision, Decision::NeedsEscalation);
-        assert!(decision.reasons.contains(&DenialReason::AmountOverLimit));
-    }
-
-    #[test]
-    fn denies_inactive_policy() {
-        let mut input = valid_input();
-        input.policy_active = false;
-        let decision = evaluate_claim(&input);
-        assert_eq!(decision.decision, Decision::Denied);
-        assert!(decision.reasons.contains(&DenialReason::PolicyInactive));
+    fn contract_version_is_semver() {
+        let parts: Vec<&str> = CONTRACT_VERSION.split('.').collect();
+        assert_eq!(parts.len(), 3, "CONTRACT_VERSION must be MAJOR.MINOR.PATCH");
+        assert!(parts.iter().all(|p| p.parse::<u32>().is_ok()));
     }
 }
-
