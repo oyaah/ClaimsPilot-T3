@@ -136,18 +136,34 @@ The live OpenAI planner lives in:
 - OpenAI output is parsed defensively because the API may wrap JSON in markdown fences.
 - OpenAI can change title/message/private-data wording only; it cannot change `recommendedDecision`.
 
+## Real T3N Contract Path (new)
+
+- `contracts/claims-policy` is now a real `wasm32-wasip2` WASM component
+  exporting `claimspilot:claims-policy/contracts@0.1.0` (verified with
+  `wasm-tools component wit`). Native policy tests: `cargo test --lib` (10/10).
+- `npm run t3:build-contract` → build WASM; `npm run t3:register` → register on
+  testnet (writes public-safe `.claimspilot-state/contract.json`);
+  `npm run t3:invoke` → live approved + escalated/denied proof.
+- App is source-aware (`lib/t3/decision-source.ts`): live T3N contract when
+  configured + registered, else local demo; audit rows mark `live`/`demo`/`error`.
+- Still policy-only: the `http-with-placeholders` insurer call is the next
+  milestone (see `docs/TERMINAL3-INTEGRATION.md`).
+- Deployment: see `docs/DEPLOYMENT.md` (Vercel+Render minimum, Cloud Run prod).
+
 ## Known Issues / Risks
 
 - `npm audit --omit=dev` still reports moderate transitive advisories from Next/PostCSS and Terminal3 SDK -> ethers/ws. No direct app dependency fix is available without breaking changes.
-- The Rust contract is a policy kernel skeleton, not a fully published live T3N contract.
-- Placeholder outbound HTTP is represented in the product flow and mock API; full live host binding still needs contract publishing.
+- The contract is real and registrable, but the **placeholder outbound** insurer
+  call is not yet wired (policy-only first, by design).
+- Live `t3:register` / `t3:invoke` testnet output still needs to be pasted into
+  `docs/LIVE-PROOF.md` from a machine with the configured key.
 - Keys pasted into chat should be rotated before anything public. This is not optional.
 
 ## Suggested Next Moves
 
-1. Record the demo with live mode first.
-2. Record a backup demo with `CLAIMSPILOT_DEMO_MODE=true`.
-3. Add screenshots to `docs/LIVE-PROOF.md`.
+1. Run `npm run t3:build-contract && npm run t3:register && npm run t3:invoke`; paste sanitized output into `docs/LIVE-PROOF.md`.
+2. Record the demo with live mode first; backup demo with `CLAIMSPILOT_DEMO_MODE=true`.
+3. Add screenshots to `docs/LIVE-PROOF.md` (t3-status, agent, audit `live` rows).
 4. Submit build + `BUGS.md` separately so the product pitch stays clean.
 5. Submit `TERMINAL3_CLAIMSPILOT_CONFIRMED_BUG_REPORT.md` for the bug track.
-6. If time remains, implement/publish the actual T3N contract invocation path.
+6. Add the `http-with-placeholders` insurer milestone (U6).

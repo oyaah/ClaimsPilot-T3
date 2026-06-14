@@ -49,19 +49,47 @@ In a live T3N contract, `http-with-placeholders` resolves these inside the encla
 
 The demo grant includes `mock-insurer.local`. Removing that host should deny the outbound action with `host_not_allowed`, matching the Terminal 3 docs that outbound HTTP is authorized by the calling user's grant.
 
-## Current Boundary
+## Real T3N Contract (policy-only milestone — live)
 
-Implemented now:
+`contracts/claims-policy` is now a real `wasm32-wasip2` WASM component, not a
+skeleton. It exports `claimspilot:claims-policy/contracts@0.1.0` with
+`evaluate-claim(generic-input) -> result<list<u8>, string>` and carries **no
+PII** — the input is the sanitized policy envelope only.
 
-- SDK adapter
-- live DID/token status surface
-- grant/policy/audit demo
-- Rust policy kernel
-- mock insurer API
+Build → register → invoke:
 
-Live contract work remaining:
+```bash
+npm run t3:build-contract   # cargo build --target wasm32-wasip2 --release
+npm run t3:register         # tenant.contracts.register({ tail, version, wasm })
+npm run t3:invoke           # T3nClient.executeAndDecode({ script_name, script_version, function_name, input })
+```
 
-- generated WIT bindings
-- T3N contract publish/register script wired to the real SDK control path
-- real `http-with-placeholders` invocation against a deployed endpoint
-- full hosted deployment capture
+- Tenant DID is read from the authenticated session (`authenticate()` output),
+  never derived from wallet material or hard-coded — see `lib/t3/contract.ts`.
+- The tail is the tenant-local name `claims-policy`; the SDK canonicalizes it to
+  `z:<tid>:claims-policy` via `canonicalTenantName`.
+- `getScriptVersion(getNodeUrl(), scriptName)` resolves the registered version.
+- The decoded decision is compared against `lib/domain/policy.ts` (the same logic
+  the Rust contract mirrors); a mismatch is surfaced, never hidden.
+
+The app selects the decision source at request time
+(`lib/t3/decision-source.ts`): live T3N contract when not in demo mode, a key is
+configured, and a registration exists; otherwise the deterministic local policy.
+Every evaluation writes an audit row marking `live` / `demo` / `error` and, for
+live, the script name + version proof. The OpenAI planner can change explanation
+text only — it never feeds the protected decision.
+
+## Next milestone — placeholder outbound (U6)
+
+The policy-only contract above is intentionally the first proof. The PII-bearing
+insurer call is the second milestone and is **not** yet wired, to keep the live
+proof unblocked by grant/profile setup. When added:
+
+- the WIT world gains `import host:interfaces/http-with-placeholders@2.1.0`;
+- a `submit-claim`-style function templates `{{profile.*}}` markers into the
+  insurer payload and the host resolves them inside the TEE;
+- outbound egress is authorized by the caller's grant (allowed-host), surfacing
+  `host_not_allowed` / egress-denied instead of a silent direct HTTP call.
+
+The mock insurer routes (`app/api/mock-insurer/*`) and the placeholder list above
+already model the destination and the allowed markers for that step.
