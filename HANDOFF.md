@@ -166,4 +166,5 @@ The live OpenAI planner lives in:
 3. Add screenshots to `docs/LIVE-PROOF.md` (t3-status, agent, audit `live` rows).
 4. Submit build + `BUGS.md` separately so the product pitch stays clean.
 5. Submit `TERMINAL3_CLAIMSPILOT_CONFIRMED_BUG_REPORT.md` for the bug track.
-6. Add the `http-with-placeholders` insurer milestone (U6).
+6. Add the `http-with-placeholders` insurer milestone (U6) — full plan + the
+   testnet account setup it needs is tracked in `docs/TODO-U6-placeholder-outbound.md`.
