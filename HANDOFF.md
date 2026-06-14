@@ -23,7 +23,8 @@ Primary files:
 - `docs/SUBMISSION.md` - submission pitch
 - `docs/TERMINAL3-INTEGRATION.md` - T3 SDK integration notes
 - `docs/LIVE-PROOF.md` - live verification evidence
-- `BUGS.md` - bug bounty ledger
+- `BUGS.md` - bug bounty index
+- `TERMINAL3_CLAIMSPILOT_CONFIRMED_BUG_REPORT.md` - detailed confirmed bug report
 - `contracts/claims-policy/` - Rust policy-kernel skeleton
 
 ## Local Env
@@ -148,4 +149,5 @@ The live OpenAI planner lives in:
 2. Record a backup demo with `CLAIMSPILOT_DEMO_MODE=true`.
 3. Add screenshots to `docs/LIVE-PROOF.md`.
 4. Submit build + `BUGS.md` separately so the product pitch stays clean.
-5. If time remains, implement/publish the actual T3N contract invocation path.
+5. Submit `TERMINAL3_CLAIMSPILOT_CONFIRMED_BUG_REPORT.md` for the bug track.
+6. If time remains, implement/publish the actual T3N contract invocation path.

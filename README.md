@@ -68,7 +68,7 @@ If `OPENAI_API_KEY` is missing, or `CLAIMSPILOT_DEMO_MODE=true`, the agent page 
 - `lib/agent/` - deterministic claims-agent planner
 - `contracts/claims-policy/` - Rust policy kernel for the T3N contract
 - `docs/` - demo script and submission docs
-- `BUGS.md` - verified SDK/docs bug-bounty ledger
+- `BUGS.md` / `TERMINAL3_CLAIMSPILOT_CONFIRMED_BUG_REPORT.md` - verified SDK/docs bug-bounty report
 - `HANDOFF.md` - teammate runbook and current live/demo context
 
 ## Bounty Alignment
