@@ -1,0 +1,12 @@
+.env
+.env.local
+.env.*.local
+.next/
+node_modules/
+coverage/
+dist/
+build/
+*.tsbuildinfo
+.DS_Store
+.supermemory/
+.claimspilot-state/
