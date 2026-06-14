@@ -422,9 +422,13 @@ Add a short "Using the SDK in Next.js / server frameworks" note to the SDK READM
 
 ---
 
-### C4 — `SessionOrgDataClient`'s runtime guard only catches the no-handshake case, giving false confidence
+## E. Beyond Onboarding / Docs — One API-Surface Observation
 
-**Severity:** minor
+The bounty's bug track scopes to **onboarding bugs** and **documentation gaps** (A–D above). The item below is neither — it is an API-design observation about runtime validation, surfaced during the deep `.d.ts` audit and offered for completeness, not as an onboarding/doc finding. Flagged separately so the scope stays honest.
+
+### E1 — `SessionOrgDataClient`'s runtime guard only catches the no-handshake case, giving false confidence
+
+**Severity:** minor (out of strict bug-track scope)
 **Area:** SDK API surface / runtime validation
 **Source:** `@terminal3/t3n-sdk@3.5.2/dist/index.d.ts`
 
@@ -465,7 +469,7 @@ Honesty about what I could **not** confirm is part of the method.
 - **One-time WASM path error.** Early in the ClaimsPilot build I once saw `The "path" argument must be of type string or an instance of URL. Received an instance of URL`. Clean repros on `3.5.0` and `3.5.2` authenticated without an explicit `wasmPath`, so I could not reproduce it and am not submitting it.
 - **Integration vs. type contract — verified clean, not a bug.** I checked ClaimsPilot's reliance on `getUsage().balance.available` against `dist/index.d.ts`: `UsagePage.balance` is a `BalanceRow` and `BalanceRow.available: number` exists, so the integration is correct. Likewise `metamask_sign(account: EthAccount, ...)` accepts `EthAccount = string | {...}`, so passing the derived address string is valid.
 - **Session-WASM crypto core — audited, found sound, not a bug.** I disassembled `dist/wasm/generated/session.core.wasm` (`strings` + symbol inspection). The handshake/auth state machine uses AES-GCM, ML-KEM-768, K256/ECDSA, and SIWE (EIP-4361) with **server-generated nonces** (`"RNG error: failed to generate nonce"`) and time-bound SIWE checks (`"SIWE lifetime exceeds server maximum (15 minutes)"`, `IssuedAtInFuture`, `ExpirationBeforeIssuedAt`, `NotYetValid`). I specifically looked for a hardcoded/constant nonce or a replay gap and found none — the nonce is freshly generated, so there is no nonce-reuse bug to report here. Stated plainly so the absence is on the record.
-- **Bundled JS is obfuscated.** `dist/index.js` ships with string-array obfuscation, which makes high-confidence logic-bug extraction from the wrapper impractical. I am not submitting speculative reverse-engineered findings from it; the confirmed wrapper-level issues (C1–C4) come from the README and the readable `.d.ts`.
+- **Bundled JS is obfuscated.** `dist/index.js` ships with string-array obfuscation, which makes high-confidence logic-bug extraction from the wrapper impractical. I am not submitting speculative reverse-engineered findings from it; the wrapper-level issues (C1–C3, plus the out-of-scope E1) come from the README and the readable `.d.ts`.
 
 ---
 
@@ -476,9 +480,10 @@ Honesty about what I could **not** confirm is part of the method.
 3. **A2** — Remove the obsolete `host_capabilities` manifest from the sample README.
 4. **C1 / C2** — Standardize `T3N_API_KEY` and fix the SDK README Quick Start node target.
 5. **A3 / A4** — Align sample versions and the `book-offer` output example.
-6. **C4** — Make `SessionOrgDataClient`'s guard check authentication, not just handshake.
-7. **C3** — Add a Next.js note to the SDK README.
-8. **B2** — Fix the setup-page step count.
+6. **C3** — Add a Next.js note to the SDK README.
+7. **B2** — Fix the setup-page step count.
+
+(E1 is an out-of-scope API-surface observation, prioritized separately from the onboarding/docs track.)
 
 ## Why This Matters For Terminal 3
 
