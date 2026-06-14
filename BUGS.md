@@ -22,8 +22,10 @@ All findings re-verified against live sources on 2026-06-14:
 | C1 | minor | SDK docs | SDK README uses `T3N_DEMO_KEY` while product/docs use `T3N_API_KEY` |
 | C2 | minor | SDK docs | SDK README Quick Start hard-codes a non-existent `baseUrl` and omits `setEnvironment` |
 | C3 | minor | SDK/framework | Next.js/Turbopack worker-thread module error unless the SDK is externalized |
+| C4 | major | SDK + register docs | `TenantClient` control-plane ops require `baseUrl` despite `setEnvironment`/`environment`; register walkthrough never shows the construction (**live-reproduced on testnet**) |
 
-Bug-track scope = onboarding bugs + documentation gaps. A1–C3 all sit in that scope.
+Bug-track scope = onboarding bugs + documentation gaps. A1–C4 all sit in that scope.
+C4 was reproduced live while registering a real contract on T3N testnet.
 
 ## Beyond Scope (offered for completeness)
 

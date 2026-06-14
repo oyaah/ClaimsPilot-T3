@@ -48,6 +48,7 @@ No SpendPass / prior-bounty finding is reused. That bounty audited the VC / Agen
 
 - `@terminal3/t3n-sdk`: `3.5.2`, `next`: `16.2.7`, T3 environment: `testnet`
 - Live SDK status: authenticated session established (`client.authenticate(createEthAuthInput(address))` returned a `did:t3n:...`); `client.getUsage()` returned a `BalanceRow` with available credits. Secrets are intentionally excluded from this repo.
+- **Live contract round-trip (2026-06-15):** a real `wasm32-wasip2` contract was registered (`tenant.contracts.register`) as `z:<tid>:claims-policy@0.1.0` and invoked (`executeAndDecode`) on testnet for an approved and an escalated claim. **C4 below was reproduced during this live registration.**
 
 ---
 
@@ -422,6 +423,82 @@ Add a short "Using the SDK in Next.js / server frameworks" note to the SDK READM
 
 ---
 
+### C4 — `TenantClient` control-plane ops require `baseUrl` despite `setEnvironment()` + `environment`; the register walkthrough never shows the construction (live-reproduced)
+
+**Severity:** major
+**Area:** SDK ergonomics + ADK register-contract docs
+**Source:** live ClaimsPilot integration, `@terminal3/t3n-sdk@3.5.2`, testnet; docs `register-contract`, `set-up-dev-env`
+
+**Reproduced live on 2026-06-15**, not inferred — this is the one finding here caught by actually registering a contract on T3N testnet.
+
+**Expected:**
+After `setEnvironment("testnet")` and constructing a `TenantClient` with the
+environment set, a tenant control-plane op (`tenant.contracts.register`) should
+resolve the node URL from the environment — exactly as `getNodeUrl()` and
+`getScriptVersion()` already do. The register-contract walkthrough should also
+show how the `tenant` client it calls `.contracts.register` on is constructed.
+
+**Actual:**
+With `setEnvironment("testnet")` called and the client built as
+`new TenantClient({ environment: "testnet", t3n, tenantDid })`, registration
+throws:
+
+```text
+registration failed: TenantClient config requires baseUrl for tenant control operations
+```
+
+The control plane does **not** fall back to the environment default the way the
+read path does. The client must additionally be given an explicit `baseUrl`:
+
+```ts
+const baseUrl = getNodeUrl();                       // resolve node for the env
+const tenant = new TenantClient({ environment, t3n, tenantDid, baseUrl });
+await tenant.contracts.register({ tail, version, wasm });   // now succeeds
+```
+
+The docs make this hard to discover: the **register-contract** walkthrough only
+shows `tenant.contracts.register({ tail, version, wasm })` and says to assume
+"an authenticated `TenantClient` named `tenant`", deferring construction to
+**set-up-dev-env** — which walks through `T3nClient` auth, not the `TenantClient`
+control-plane `baseUrl`. So nothing in the getting-started path shows the field
+that registration actually requires.
+
+**Reproduction:**
+
+```ts
+setEnvironment("testnet");
+const t3n = new T3nClient({ wasmComponent, handlers: { EthSign: metamask_sign(address, undefined, key) } });
+await t3n.handshake();
+const did = await t3n.authenticate(createEthAuthInput(address));
+// environment is set, but NO baseUrl:
+const tenant = new TenantClient({ environment: "testnet", t3n, tenantDid: String(did.value ?? did) });
+await tenant.contracts.register({ tail: "claims-policy", version: "0.1.0", wasm });
+// => Error: TenantClient config requires baseUrl for tenant control operations
+```
+
+Adding `baseUrl: getNodeUrl()` to the config makes the same call succeed (verified:
+contract registered as `z:<tid>:claims-policy@0.1.0` and invoked on testnet).
+
+**Impact:**
+This blocks the *core* register-contract walkthrough step for a builder who
+followed `setEnvironment` + `environment` and reasonably expected the node URL to
+resolve. The error names the missing field but not how to fill it, and the
+walkthrough never shows the `TenantClient` construction, so the builder has to
+reverse-engineer `getNodeUrl()` from the invoke page. It cost a real
+register failure in this build.
+
+**Workaround:**
+Pass `baseUrl: getNodeUrl()` (or an explicit node URL) into the `TenantClient`
+config used for registration.
+
+**Suggested fix:**
+Either resolve `baseUrl` from `environment` for control-plane ops (parity with
+the read path), or add the `TenantClient` construction — including
+`baseUrl: getNodeUrl()` — to the register-contract walkthrough and the
+set-up-dev-env page, and extend the error to name the fix.
+
+---
+
 ## E. Beyond Onboarding / Docs — One API-Surface Observation
 
 The bounty's bug track scopes to **onboarding bugs** and **documentation gaps** (A–D above). The item below is neither — it is an API-design observation about runtime validation, surfaced during the deep `.d.ts` audit and offered for completeness, not as an onboarding/doc finding. Flagged separately so the scope stays honest.
@@ -476,12 +553,13 @@ Honesty about what I could **not** confirm is part of the method.
 ## Suggested Fix Priority
 
 1. **A1** — Rewrite the sample README's `book-offer` PII model. Highest impact: it can lead builders to expose PII to the agent, the exact thing ADK prevents.
-2. **B1** — Fix the placeholder quick-tip binding/request shape. Most likely copy-paste failure on the flagship feature.
-3. **A2** — Remove the obsolete `host_capabilities` manifest from the sample README.
-4. **C1 / C2** — Standardize `T3N_API_KEY` and fix the SDK README Quick Start node target.
-5. **A3 / A4** — Align sample versions and the `book-offer` output example.
-6. **C3** — Add a Next.js note to the SDK README.
-7. **B2** — Fix the setup-page step count.
+2. **C4** — Resolve `TenantClient` control-plane `baseUrl` from the environment (or show its construction in the register walkthrough). Live-reproduced; it blocks the register step.
+3. **B1** — Fix the placeholder quick-tip binding/request shape. Most likely copy-paste failure on the flagship feature.
+4. **A2** — Remove the obsolete `host_capabilities` manifest from the sample README.
+5. **C1 / C2** — Standardize `T3N_API_KEY` and fix the SDK README Quick Start node target.
+6. **A3 / A4** — Align sample versions and the `book-offer` output example.
+7. **C3** — Add a Next.js note to the SDK README.
+8. **B2** — Fix the setup-page step count.
 
 (E1 is an out-of-scope API-surface observation, prioritized separately from the onboarding/docs track.)
 
