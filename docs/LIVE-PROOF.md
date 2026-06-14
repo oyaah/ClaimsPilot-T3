@@ -1,6 +1,7 @@
 # Live Proof
 
-Status: live SDK and live OpenAI planner verification passed locally.
+Status: live SDK auth, live OpenAI planner, AND a real T3N contract registered +
+invoked on testnet (see "Live testnet register + invoke" below).
 
 The app reads `T3N_API_KEY`, `NEXT_PUBLIC_T3_DID`, and `OPENAI_API_KEY` from `.env.local`.
 
@@ -36,16 +37,43 @@ Local build proof (already captured, machine-independent):
 - `cargo build --target wasm32-wasip2 --release` -> `claims_policy.wasm` (~162 KB)
 - `wasm-tools component wit ...` -> `export claimspilot:claims-policy/contracts@0.1.0;`
 
-Paste live testnet register/invoke output below (sanitized — no keys, no PII):
+### Live testnet register + invoke (captured 2026-06-15, sanitized — no keys, no PII)
+
+Registered on T3N testnet:
 
 ```text
-# t3:register output here
-# t3:invoke output here (approved + escalated/denied, with localParity)
+[t3:register] read 162416 bytes ... claims_policy.wasm
+[t3:register] authenticated tenant did:t3n:dc851f7daab01b36a986b212e49673c2bc00f904 on testnet
+[t3:register] registering claims-policy@0.1.0 as z:dc851f7daab01b36a986b212e49673c2bc00f904:claims-policy
+[t3:register] success:
+  { "tail": "claims-policy", "version": "0.1.0",
+    "scriptName": "z:dc851f7daab01b36a986b212e49673c2bc00f904:claims-policy",
+    "environment": "testnet" }
 ```
+
+Invoked live (decision came from the registered T3N contract, not local TS):
+
+```text
+[t3:invoke] approved claim CLM-104 ($420)
+  { "source": "live-t3n",
+    "scriptName": "z:dc851f7daab01b36a986b212e49673c2bc00f904:claims-policy",
+    "scriptVersion": "0.1.0",
+    "decision": "approved", "reasons": [], "localParity": "match" }
+
+[t3:invoke] escalated/denied claim CLM-219 ($4800)
+  { "source": "live-t3n",
+    "scriptName": "z:dc851f7daab01b36a986b212e49673c2bc00f904:claims-policy",
+    "scriptVersion": "0.1.0",
+    "decision": "needs_escalation", "reasons": ["amount_over_limit"],
+    "localParity": "match" }
+```
+
+`localParity: match` on both = the live TEE contract decision is identical to the
+local policy oracle (`lib/domain/policy.ts`). The decision is enforced on T3N, not
+in the app server.
 
 Still capture before final submission:
 
-- live `npm run t3:register` + `npm run t3:invoke` output (commands above)
 - screenshot of `/dashboard/t3-status`
 - screenshot of `/dashboard/agent` showing `OpenAI gpt-4.1-mini`
 - screenshot of audit rows after protected actions (showing `live` source)

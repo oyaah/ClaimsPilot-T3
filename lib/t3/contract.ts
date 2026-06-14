@@ -227,7 +227,10 @@ export async function createAuthenticatedT3Contract(): Promise<AuthedContractCon
   const sessionDid = String((didResult as { value?: string }).value ?? didResult);
   const did = tenantDidPreferSession(sessionDid, process.env.DID);
 
-  const tenantClient = new sdk.TenantClient({ environment, t3n, tenantDid: did });
+  // TenantClient control-plane ops (register/disable/...) require an explicit
+  // node baseUrl; getNodeUrl() resolves it from the active environment.
+  const baseUrl = sdk.getNodeUrl();
+  const tenantClient = new sdk.TenantClient({ environment, t3n, tenantDid: did, baseUrl });
   const scriptName = sdk.canonicalTenantName(did, validateContractTail(CONTRACT_TAIL));
 
   return { sdk, t3n, tenantClient, did, address, environment, scriptName };
