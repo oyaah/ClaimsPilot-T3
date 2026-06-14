@@ -43,13 +43,15 @@ export function primaryReason(decision: PolicyDecision): DenialReason | undefine
   return decision.reasons[0];
 }
 
+export const PERMITTED_PLACEHOLDERS = [
+  "{{profile.first_name}}",
+  "{{profile.last_name}}",
+  "{{profile.date_of_birth}}",
+  "{{profile.verified_contacts.email.value}}"
+] as const;
+
 export function isPermittedPlaceholder(field: string): boolean {
-  return [
-    "{{profile.first_name}}",
-    "{{profile.last_name}}",
-    "{{profile.date_of_birth}}",
-    "{{profile.verified_contacts.email.value}}"
-  ].includes(field);
+  return (PERMITTED_PLACEHOLDERS as readonly string[]).includes(field);
 }
 
 export function describeReason(reason: DenialReason | undefined): string {
