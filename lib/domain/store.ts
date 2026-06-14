@@ -127,6 +127,74 @@ export function evaluateClaim(claimId: string, agentDid = DEFAULT_AGENT_DID): Po
   return decision;
 }
 
+/**
+ * Source-aware evaluation. When the live T3N contract is selected (not demo
+ * mode, key configured, registration present), the decision comes from the TEE
+ * contract; on contract failure it falls back to the local policy and marks the
+ * fallback in the audit row. Otherwise it runs the local demo path. The audit
+ * row records the decision source and (for live) the script name/version proof.
+ */
+export async function evaluateClaimWithSource(
+  claimId: string,
+  agentDid = DEFAULT_AGENT_DID
+): Promise<PolicyDecision & { source: "live" | "demo" | "error" }> {
+  const { getDecisionSource, evaluateClaimViaContract } = await import("@/lib/t3/decision-source");
+  if (getDecisionSource() !== "live") {
+    return { ...evaluateClaim(claimId, agentDid), source: "demo" };
+  }
+
+  const state = readState();
+  const claim = state.claims.find((row) => row.id === claimId);
+  if (!claim) throw new Error(`Claim not found: ${claimId}`);
+
+  const nonce = `${claim.id}:${state.grant.id}:${claim.amountUsd}`;
+  const replayed = state.usedNonces.includes(nonce);
+  // Local oracle decision is the structural fallback; the contract is authoritative when live.
+  const localDecision = evaluateClaimPolicy(claim, state.grant, agentDid, new Set(state.usedNonces), nonce);
+
+  let decision = localDecision;
+  let source: "live" | "error" = "live";
+  let message: string;
+  let mode: AuditEvent["mode"] = "live";
+
+  try {
+    const live = await evaluateClaimViaContract(claim, state.grant, agentDid, { replayed });
+    decision = { ...localDecision, decision: live.decision, reasons: live.reasons };
+    const parityNote = live.parityMatch ? "parity ok" : `PARITY MISMATCH local=${live.localDecision}`;
+    message = `Live T3N contract ${live.scriptName}@${live.scriptVersion}: ${describeReason(primaryReason(decision))} (${parityNote})`;
+  } catch (error) {
+    source = "error";
+    mode = "error";
+    const reason = error instanceof Error ? error.message : String(error);
+    message = `Live contract unavailable; fell back to local policy. ${reason}`;
+  }
+
+  appendAudit(state, {
+    action: decision.decision === "approved" ? "claim.approve" : "claim.deny",
+    decision: decision.decision,
+    agentDid,
+    claimId: claim.id,
+    grantId: state.grant.id,
+    amountUsd: claim.amountUsd,
+    host: claim.destinationHost,
+    mode,
+    reason: mode === "error" ? "error" : primaryReason(decision),
+    message
+  });
+
+  if (decision.decision === "approved") {
+    state.usedNonces.push(nonce);
+    claim.status = "approved";
+  } else if (decision.decision === "needs_escalation") {
+    claim.status = "needs_escalation";
+  } else {
+    claim.status = "denied";
+  }
+
+  writeState(state);
+  return { ...decision, source };
+}
+
 export function escalateGrant(maxAmountUsd: number, claimType: Grant["allowedClaimTypes"][number]): Grant {
   const state = readState();
   state.grant = {
