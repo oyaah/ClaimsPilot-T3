@@ -163,6 +163,27 @@ export function comparePolicyParity(
   };
 }
 
+/**
+ * Detect T3N's "version is not higher than current version" registration
+ * conflict (see ADK common-errors), so the register script can map it to a
+ * clear bump-version instruction instead of a raw SDK error.
+ */
+export function isVersionConflictError(error: unknown): boolean {
+  const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  return (
+    message.includes("not higher than current version") ||
+    (message.includes("version") && message.includes("already"))
+  );
+}
+
+export function versionConflictHelp(version: string): string {
+  return [
+    `Contract version ${version} is not higher than the version already registered on T3N.`,
+    "Bump the version in contracts/claims-policy (Cargo.toml + CONTRACT_VERSION) and",
+    "CONTRACT_VERSION in lib/t3/contract.ts, rebuild the WASM, then re-run registration."
+  ].join(" ");
+}
+
 type T3Sdk = typeof import("@terminal3/t3n-sdk");
 
 export type AuthedContractContext = {

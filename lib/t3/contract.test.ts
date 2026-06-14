@@ -6,8 +6,10 @@ import {
   buildClaimInput,
   comparePolicyParity,
   decodeClaimDecision,
+  isVersionConflictError,
   tenantDidPreferSession,
   validateContractTail,
+  versionConflictHelp,
   CONTRACT_TAIL
 } from "./contract";
 
@@ -84,6 +86,26 @@ describe("decodeClaimDecision", () => {
 
   it("throws on non-JSON string", () => {
     expect(() => decodeClaimDecision("not json")).toThrow(/not valid JSON/);
+  });
+});
+
+describe("isVersionConflictError", () => {
+  it("detects the T3N not-higher-than-current version error", () => {
+    expect(
+      isVersionConflictError(new Error("version 0.1.0 is not higher than current version 0.1.0"))
+    ).toBe(true);
+  });
+
+  it("detects an already-registered version error", () => {
+    expect(isVersionConflictError(new Error("contract version already registered"))).toBe(true);
+  });
+
+  it("ignores unrelated errors", () => {
+    expect(isVersionConflictError(new Error("network unreachable"))).toBe(false);
+  });
+
+  it("renders a bump-version instruction", () => {
+    expect(versionConflictHelp("0.1.0")).toMatch(/Bump the version/);
   });
 });
 

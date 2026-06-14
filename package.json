@@ -12,7 +12,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "seed": "tsx scripts/seed.ts",
-    "verify": "tsx scripts/verify-setup.ts"
+    "verify": "tsx scripts/verify-setup.ts",
+    "t3:build-contract": "cd contracts/claims-policy && cargo build --target wasm32-wasip2 --release",
+    "t3:register": "tsx scripts/t3-register-contract.ts",
+    "t3:invoke": "tsx scripts/t3-invoke-contract.ts"
   },
   "dependencies": {
     "@terminal3/t3n-sdk": "^3.5.0",
