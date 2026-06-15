@@ -1,7 +1,7 @@
 ---
 title: "feat: Add real T3N contract publish and invoke path"
 type: feat
-status: active
+status: completed
 date: 2026-06-15
 origin: docs/brainstorms/2026-06-15-real-t3n-contract-requirements.md
 ---

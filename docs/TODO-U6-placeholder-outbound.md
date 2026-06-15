@@ -1,10 +1,9 @@
 # TODO — U6: Placeholder-Outbound Insurer Call (next milestone)
 
-Status: **code built, live proof pending**. The contract/app path is wired for
-`submit-claim` through `http-with-placeholders`, but final proof still needs
-testnet profile + allowed-host grant setup. Plan
-`docs/plans/2026-06-15-001-feat-real-t3n-contract-plan.md` remains
-`status: active` until the live proof is captured.
+Status: **complete**. The contract/app path is wired for `submit-claim` through
+`http-with-placeholders`, and live proof is captured with both granted-host
+success and ungranted-host denial. Plan
+`docs/plans/2026-06-15-001-feat-real-t3n-contract-plan.md` is now complete.
 
 ## Code (done)
 
@@ -22,7 +21,7 @@ Allowed placeholder markers (already the single source of truth in
 `{{profile.first_name}}`, `{{profile.last_name}}`, `{{profile.date_of_birth}}`,
 `{{profile.verified_contacts.email.value}}`.
 
-## Live PII proof — needs setup on the testnet account (cannot be faked)
+## Live PII proof — completed on the testnet account
 
 1. **User profile** with `first_name` / `last_name` / `date_of_birth` /
    verified email — via the OTP flow: `client.otpRequest` → `client.otpVerify`
@@ -47,4 +46,4 @@ Allowed placeholder markers (already the single source of truth in
 - WIT imports `http-with-placeholders`; `submit-claim` registered as `0.2.0`.
 - Live run captured in `docs/LIVE-PROOF.md`: a resolved-PII insurer call AND an
   egress-denied case.
-- Flip the plan to `status: completed`.
+- Plan flipped to `status: completed`.

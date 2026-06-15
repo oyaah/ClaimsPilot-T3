@@ -1,8 +1,8 @@
 # Live Proof
 
-Status: live SDK auth, live OpenAI planner, and a real T3N contract registered +
-invoked on testnet for the policy-only proof. U6 placeholder outbound is wired
-in code and needs a fresh `0.2.0` registration plus profile/grant setup.
+Status: live SDK auth, live OpenAI planner, a real T3N contract registered +
+invoked on testnet, and U6 placeholder outbound proved with both granted-host
+success and ungranted-host denial.
 
 The app reads `T3N_API_KEY`, `NEXT_PUBLIC_T3_DID`, and `OPENAI_API_KEY` from `.env.local`.
 
@@ -107,7 +107,7 @@ Invoked live (decision came from the registered T3N contract, not local TS):
 local policy oracle (`lib/domain/policy.ts`). The decision is enforced on T3N, not
 in the app server.
 
-## Placeholder outbound proof (U6 — capture next)
+## Placeholder outbound proof (U6)
 
 Code path now exists:
 
@@ -140,6 +140,40 @@ Expected full success proof after T3N profile + allowed-host grant setup:
 ```text
 claim.submit -> approved
 message: Placeholder outbound z:<tenant>:claims-policy@0.2.0: queued (PAY-CLM-104)
+```
+
+Captured 2026-06-15 after T3N profile setup, verified email, and self-grant for
+`claimspilot-backend.onrender.com`.
+
+Granted-host success:
+
+```text
+submit-claim -> approved
+script: z:dc851f7daab01b36a986b212e49673c2bc00f904:claims-policy@0.2.0
+status: queued
+claimId: CLM-104
+insurerReference: PAY-CLM-104
+sanitized: true
+piiEchoed: false
+```
+
+Audit row from deployed Render backend:
+
+```text
+claim.submit -> approved
+message: Placeholder outbound z:dc851f7daab01b36a986b212e49673c2bc00f904:claims-policy@0.2.0: duplicate_ignored (PAY-CLM-104).
+mode: live
+```
+
+The audit row is `duplicate_ignored` because the same claim was invoked twice
+while smoke-testing Render and Vercel; the direct unique-key proof above returned
+`queued`.
+
+Ungranted-host denial:
+
+```text
+submit-claim -> denied
+message: egress denied for host example.com
 ```
 
 Do not paste resolved claimant names, DOB, emails, or raw profile output here.
