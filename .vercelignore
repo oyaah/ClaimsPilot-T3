@@ -1,0 +1,11 @@
+.env
+.env.*
+.claimspilot-state/
+.git/
+.next/
+node_modules/
+contracts/**/target/
+coverage/
+dist/
+build/
+render.yaml
