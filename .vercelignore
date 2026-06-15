@@ -5,6 +5,11 @@
 .next/
 node_modules/
 contracts/**/target/
+contracts/claims-policy/target
+contracts/claims-policy/target/**
+.supermemory/
+.supermemory/**
+*.tsbuildinfo
 coverage/
 dist/
 build/
