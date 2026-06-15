@@ -155,10 +155,7 @@ The live OpenAI planner lives in:
 ## Known Issues / Risks
 
 - `npm audit --omit=dev` still reports moderate transitive advisories from Next/PostCSS and Terminal3 SDK -> ethers/ws. No direct app dependency fix is available without breaking changes.
-- The `0.2.0` placeholder outbound contract path is wired, but the **live
-  resolved-PII proof** is not captured yet.
-- Live `t3:register` / `t3:invoke` testnet output still needs to be pasted into
-  `docs/LIVE-PROOF.md` from a machine with the configured key.
+- Render keeps the demo audit store in local process memory. A redeploy or cold restart can clear live audit rows until the protected action is invoked again. The durable proof is captured in `docs/LIVE-PROOF.md`; production should move audit/proof storage to Postgres.
 - Keys pasted into chat should be rotated before anything public. This is not optional.
 
 ## Suggested Next Moves
