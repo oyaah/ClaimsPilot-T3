@@ -1,8 +1,8 @@
 [package]
 name = "claims-policy"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
-description = "ClaimsPilot protected claim-decision contract for Terminal 3 / T3N (policy-only, carries no PII)"
+description = "ClaimsPilot protected claim-decision + placeholder outbound contract for Terminal 3 / T3N"
 license = "MIT"
 publish = false
 

@@ -11,9 +11,12 @@ import { getT3Environment } from "./status";
 /** Tenant-local contract name (NOT the canonical `z:<tid>:` name). */
 export const CONTRACT_TAIL = "claims-policy";
 /** Must match `contracts/claims-policy` `CONTRACT_VERSION` / `Cargo.toml`. */
-export const CONTRACT_VERSION = "0.1.0";
+export const CONTRACT_VERSION = "0.2.0";
 /** Exported WIT function name. */
 export const CONTRACT_FUNCTION = "evaluate-claim";
+/** Exported WIT function for placeholder outbound insurer submission. */
+export const CONTRACT_SUBMIT_FUNCTION = "submit-claim";
+export const DEFAULT_INSURER_SUBMIT_PATH = "/api/mock-insurer/payouts";
 
 /** Sanitized policy envelope sent to the contract. Mirrors Rust `ClaimInput`. */
 export type ClaimInput = {
@@ -42,6 +45,26 @@ export type ClaimInput = {
 export type ClaimDecision = {
   decision: Decision;
   reasons: DenialReason[];
+};
+
+/** Placeholder-only outbound submit envelope. Mirrors Rust `SubmitClaimInput`. */
+export type SubmitClaimInput = {
+  claim_id: string;
+  amount_usd: number;
+  claimant_ref: string;
+  destination_url: string;
+  idempotency_key: string;
+  placeholders: string[];
+  allowed_placeholders: string[];
+};
+
+/** Decoded placeholder outbound result. Mirrors Rust `SubmitClaimResult`. */
+export type SubmitClaimResult = {
+  status: string;
+  claim_id: string;
+  insurer_reference?: string;
+  sanitized: boolean;
+  pii_echoed: boolean;
 };
 
 /** Raised when live contract config (API key, etc.) is missing. */
@@ -120,6 +143,41 @@ export function buildClaimInput(
   };
 }
 
+export function buildInsurerSubmitUrl(claim: Claim, baseUrl = process.env.CLAIMSPILOT_INSURER_BASE_URL): string {
+  const base = baseUrl?.trim() || `https://${claim.destinationHost}`;
+  return new URL(DEFAULT_INSURER_SUBMIT_PATH, base.endsWith("/") ? base : `${base}/`).toString();
+}
+
+/**
+ * Build the placeholder outbound payload for the contract. It carries profile
+ * markers only; the host resolves them inside T3N at dispatch time.
+ */
+export function buildSubmitClaimInput(
+  claim: Claim,
+  grant: Grant,
+  opts: { idempotencyKey: string; insurerBaseUrl?: string }
+): SubmitClaimInput {
+  if (!grant.allowedHosts.includes(claim.destinationHost)) {
+    throw new Error(`host_not_allowed: ${claim.destinationHost}`);
+  }
+  const unpermitted = claim.piiPlaceholders.find(
+    (field) => !(PERMITTED_PLACEHOLDERS as readonly string[]).includes(field)
+  );
+  if (unpermitted) {
+    throw new Error(`placeholder_not_permitted: ${unpermitted}`);
+  }
+  const destinationUrl = buildInsurerSubmitUrl(claim, opts.insurerBaseUrl);
+  return {
+    claim_id: claim.id,
+    amount_usd: claim.amountUsd,
+    claimant_ref: claim.claimantId,
+    destination_url: destinationUrl,
+    idempotency_key: opts.idempotencyKey,
+    placeholders: [...claim.piiPlaceholders],
+    allowed_placeholders: [...PERMITTED_PLACEHOLDERS]
+  };
+}
+
 const DECISIONS: Decision[] = ["approved", "denied", "needs_escalation"];
 
 /** Validate + type a raw contract response into a `ClaimDecision`. */
@@ -135,6 +193,24 @@ export function decodeClaimDecision(raw: unknown): ClaimDecision {
   }
   const reasons = Array.isArray(obj.reasons) ? obj.reasons.map(String) : [];
   return { decision: decision as Decision, reasons: reasons as DenialReason[] };
+}
+
+export function decodeSubmitClaimResult(raw: unknown): SubmitClaimResult {
+  const value = typeof raw === "string" ? safeJsonParse(raw) : raw;
+  if (!value || typeof value !== "object") {
+    throw new Error("submit-claim response is not an object");
+  }
+  const obj = value as Record<string, unknown>;
+  if (typeof obj.status !== "string" || typeof obj.claim_id !== "string") {
+    throw new Error("submit-claim response is missing status or claim_id");
+  }
+  return {
+    status: obj.status,
+    claim_id: obj.claim_id,
+    insurer_reference: typeof obj.insurer_reference === "string" ? obj.insurer_reference : undefined,
+    sanitized: obj.sanitized === true,
+    pii_echoed: obj.pii_echoed === true
+  };
 }
 
 function safeJsonParse(raw: string): unknown {

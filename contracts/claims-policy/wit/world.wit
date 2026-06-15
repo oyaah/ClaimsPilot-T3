@@ -1,15 +1,16 @@
-/// claims-policy WIT world — ClaimsPilot protected claim decision.
+/// claims-policy WIT world — ClaimsPilot protected claim decision + submit.
 ///
-/// Policy-only contract: it decides allow / deny / needs-escalation for a
-/// claim against the caller's delegated grant. It carries NO claimant PII.
-/// The claim decision input is the sanitized policy envelope only
-/// (amounts, claim type, region, grant scope, identity/host flags) — never
-/// names, documents, or contact details. The PII-bearing insurer call is a
-/// separate, later milestone that uses `host:interfaces/http-with-placeholders`
-/// so plaintext PII is resolved inside the TEE and never enters WASM memory.
-package claimspilot:claims-policy@0.1.0;
+/// `evaluate-claim` stays policy-only: it decides allow / deny /
+/// needs-escalation for a claim against the caller's delegated grant and
+/// carries NO claimant PII. `submit-claim` is the approved-claim outbound path:
+/// it templates `{{profile.*}}` markers into an insurer payload and uses
+/// `host:interfaces/http-with-placeholders`, so plaintext PII is resolved by
+/// the host inside the TEE and never enters WASM memory.
+package claimspilot:claims-policy@0.2.0;
 
 world claims-policy {
+    import host:interfaces/http-with-placeholders@2.1.0;
+
     export contracts;
 }
 
@@ -28,4 +29,10 @@ interface contracts {
     /// Input  (JSON): ClaimInput  — sanitized policy envelope, NO PII.
     /// Output (JSON): ClaimDecision { decision, reasons }.
     evaluate-claim: func(req: generic-input) -> result<list<u8>, string>;
+
+    /// Submit an already-approved claim to the insurer through placeholder
+    /// outbound HTTP. Input carries URL, claim metadata, idempotency key, and
+    /// allowed placeholder markers only — never resolved profile values.
+    /// Output (JSON): SubmitClaimResult { status, claim_id, insurer_reference }.
+    submit-claim: func(req: generic-input) -> result<list<u8>, string>;
 }

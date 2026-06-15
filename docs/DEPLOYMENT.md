@@ -17,7 +17,9 @@ Vercel (Next.js UI)  ──HTTP──►  Render (Node API/worker)  ──►  T
 ```
 
 - **Vercel** serves the Next.js UI. Keep any route that touches the SDK on the
-  Node runtime (`export const runtime = "nodejs"`), or proxy it to Render.
+  Node runtime (`export const runtime = "nodejs"`), or proxy it to Render. In
+  this repo, setting `CLAIMSPILOT_BACKEND_URL` on Vercel rewrites `/api/*` to
+  the Render service.
 - **Render** owns live SDK/WASM operations: `npm run t3:register`,
   `npm run t3:invoke`, and the `/api/t3/contract/*` routes. Render runs a normal
   Node container, so `loadWasmComponent` and the shipped `session.core.wasm`
@@ -32,6 +34,11 @@ Vercel (Next.js UI)  ──HTTP──►  Render (Node API/worker)  ──►  T
 | `CLAIMSPILOT_T3_ENVIRONMENT` | both | `testnet` for the bounty. |
 | `CLAIMSPILOT_DEMO_MODE` | both | `false` for live; `true` for offline recording. |
 | `NEXT_PUBLIC_T3_DID` | both | Public DID label for the UI. |
+| `CLAIMSPILOT_INSURER_BASE_URL` | Render | Public base URL whose `/api/mock-insurer/payouts` route T3N can reach for U6 placeholder outbound. |
+| `CLAIMSPILOT_BACKEND_URL` | Vercel | Render service URL; enables Vercel frontend to proxy `/api/*` to Render. |
+| `CLAIMSPILOT_CONTRACT_SCRIPT_NAME` | Render | Public-safe registered script name, e.g. `z:<tenant>:claims-policy`. |
+| `CLAIMSPILOT_CONTRACT_VERSION` | Render | `0.2.0` for U6. |
+| `CLAIMSPILOT_CONTRACT_TENANT_DID` | Render | Public-safe tenant DID from registration. |
 
 ### Build & run
 

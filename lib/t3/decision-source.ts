@@ -1,10 +1,13 @@
 import type { Claim, Decision, DenialReason, Grant } from "@/lib/domain/types";
 import {
   CONTRACT_FUNCTION,
+  CONTRACT_SUBMIT_FUNCTION,
   buildClaimInput,
+  buildSubmitClaimInput,
   comparePolicyParity,
   createAuthenticatedT3Contract,
-  decodeClaimDecision
+  decodeClaimDecision,
+  decodeSubmitClaimResult
 } from "./contract";
 import { hasContractRegistration, readContractRegistration } from "./contract-state";
 
@@ -29,6 +32,16 @@ export type LiveContractDecision = {
   scriptVersion: string;
   parityMatch: boolean;
   localDecision: Decision;
+};
+
+export type LiveContractSubmit = {
+  status: string;
+  claimId: string;
+  insurerReference?: string;
+  scriptName: string;
+  scriptVersion: string;
+  sanitized: boolean;
+  piiEchoed: boolean;
 };
 
 /**
@@ -73,5 +86,49 @@ export async function evaluateClaimViaContract(
     scriptVersion,
     parityMatch: parity.match,
     localDecision: parity.localDecision
+  };
+}
+
+/**
+ * Server-only: submit one already-approved claim through the registered T3N
+ * contract's placeholder outbound path. Live network.
+ */
+export async function submitClaimViaContract(
+  claim: Claim,
+  grant: Grant,
+  opts: { idempotencyKey: string; insurerBaseUrl?: string }
+): Promise<LiveContractSubmit> {
+  const registration = readContractRegistration();
+  if (!registration) {
+    throw new Error("No contract registration found; run `npm run t3:register` first.");
+  }
+
+  const ctx = await createAuthenticatedT3Contract();
+
+  let scriptVersion = registration.version;
+  try {
+    scriptVersion = await ctx.sdk.getScriptVersion(ctx.sdk.getNodeUrl(), registration.scriptName);
+  } catch {
+    // fall back to the registered version on resolution failure
+  }
+
+  const input = buildSubmitClaimInput(claim, grant, opts);
+  const raw = await ctx.t3n.executeAndDecode({
+    script_name: registration.scriptName,
+    script_version: scriptVersion,
+    function_name: CONTRACT_SUBMIT_FUNCTION,
+    input
+  });
+
+  const decoded = decodeSubmitClaimResult(raw);
+
+  return {
+    status: decoded.status,
+    claimId: decoded.claim_id,
+    insurerReference: decoded.insurer_reference,
+    scriptName: registration.scriptName,
+    scriptVersion,
+    sanitized: decoded.sanitized,
+    piiEchoed: decoded.pii_echoed
   };
 }

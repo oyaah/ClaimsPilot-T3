@@ -139,22 +139,24 @@ The live OpenAI planner lives in:
 ## Real T3N Contract Path (new)
 
 - `contracts/claims-policy` is now a real `wasm32-wasip2` WASM component
-  exporting `claimspilot:claims-policy/contracts@0.1.0` (verified with
-  `wasm-tools component wit`). Native policy tests: `cargo test --lib` (10/10).
+  exporting `claimspilot:claims-policy/contracts@0.2.0` with policy decision
+  and placeholder outbound submit exports (verified with `wasm-tools component
+  wit`). Native policy/submit tests: `cargo test --lib` (13/13).
 - `npm run t3:build-contract` → build WASM; `npm run t3:register` → register on
   testnet (writes public-safe `.claimspilot-state/contract.json`);
   `npm run t3:invoke` → live approved + escalated/denied proof.
 - App is source-aware (`lib/t3/decision-source.ts`): live T3N contract when
   configured + registered, else local demo; audit rows mark `live`/`demo`/`error`.
-- Still policy-only: the `http-with-placeholders` insurer call is the next
-  milestone (see `docs/TERMINAL3-INTEGRATION.md`).
+- U6 code is wired: `submit-claim` uses `http-with-placeholders` after a live
+  approval and audits `host_not_allowed` egress denial as its own outcome.
+  Live proof still needs profile + allowed-host grant setup.
 - Deployment: see `docs/DEPLOYMENT.md` (Vercel+Render minimum, Cloud Run prod).
 
 ## Known Issues / Risks
 
 - `npm audit --omit=dev` still reports moderate transitive advisories from Next/PostCSS and Terminal3 SDK -> ethers/ws. No direct app dependency fix is available without breaking changes.
-- The contract is real and registrable, but the **placeholder outbound** insurer
-  call is not yet wired (policy-only first, by design).
+- The `0.2.0` placeholder outbound contract path is wired, but the **live
+  resolved-PII proof** is not captured yet.
 - Live `t3:register` / `t3:invoke` testnet output still needs to be pasted into
   `docs/LIVE-PROOF.md` from a machine with the configured key.
 - Keys pasted into chat should be rotated before anything public. This is not optional.
@@ -166,5 +168,6 @@ The live OpenAI planner lives in:
 3. Add screenshots to `docs/LIVE-PROOF.md` (t3-status, agent, audit `live` rows).
 4. Submit build + `BUGS.md` separately so the product pitch stays clean.
 5. Submit `TERMINAL3_CLAIMSPILOT_CONFIRMED_BUG_REPORT.md` for the bug track.
-6. Add the `http-with-placeholders` insurer milestone (U6) — full plan + the
-   testnet account setup it needs is tracked in `docs/TODO-U6-placeholder-outbound.md`.
+6. Finish U6 live proof: register `0.2.0`, configure profile + allowed-host
+   grant + public insurer URL, then paste sanitized egress-denied and success
+   output into `docs/LIVE-PROOF.md`.

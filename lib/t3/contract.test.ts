@@ -4,13 +4,17 @@ import { evaluateClaimPolicy } from "@/lib/domain/policy";
 import type { Claim, Grant } from "@/lib/domain/types";
 import {
   buildClaimInput,
+  buildInsurerSubmitUrl,
+  buildSubmitClaimInput,
   comparePolicyParity,
   decodeClaimDecision,
+  decodeSubmitClaimResult,
   isVersionConflictError,
   tenantDidPreferSession,
   validateContractTail,
   versionConflictHelp,
-  CONTRACT_TAIL
+  CONTRACT_TAIL,
+  CONTRACT_VERSION
 } from "./contract";
 
 const approvedClaim = demoClaims.find((c) => c.amountUsd <= demoGrant.maxAmountUsd) as Claim;
@@ -67,6 +71,44 @@ describe("buildClaimInput", () => {
   });
 });
 
+describe("buildSubmitClaimInput", () => {
+  it("uses contract version 0.2.0 for the placeholder outbound milestone", () => {
+    expect(CONTRACT_VERSION).toBe("0.2.0");
+  });
+
+  it("builds the placeholder-only outbound envelope with no raw PII", () => {
+    const input = buildSubmitClaimInput(approvedClaim, demoGrant, {
+      idempotencyKey: "CLM-104:grant_demo:420",
+      insurerBaseUrl: "https://claims.example.com"
+    });
+
+    expect(input.destination_url).toBe("https://claims.example.com/api/mock-insurer/payouts");
+    expect(input.placeholders).toContain("{{profile.first_name}}");
+
+    const serialized = JSON.stringify(input);
+    expect(serialized).toContain("{{profile.");
+    expect(serialized).not.toContain(approvedClaim.claimantDisplay);
+  });
+
+  it("derives the submit URL from the claim host when no base URL is configured", () => {
+    expect(buildInsurerSubmitUrl(approvedClaim)).toBe("https://mock-insurer.local/api/mock-insurer/payouts");
+  });
+
+  it("rejects a submit when the grant lacks the destination host", () => {
+    const grant: Grant = { ...demoGrant, allowedHosts: [] };
+    expect(() =>
+      buildSubmitClaimInput(approvedClaim, grant, { idempotencyKey: "CLM-104:grant_demo:420" })
+    ).toThrow(/host_not_allowed/);
+  });
+
+  it("rejects unpermitted placeholder markers before invoking T3N", () => {
+    const claim: Claim = { ...approvedClaim, piiPlaceholders: ["{{profile.ssn}}"] };
+    expect(() =>
+      buildSubmitClaimInput(claim, demoGrant, { idempotencyKey: "CLM-104:grant_demo:420" })
+    ).toThrow(/placeholder_not_permitted/);
+  });
+});
+
 describe("decodeClaimDecision", () => {
   it("decodes a valid contract response object", () => {
     const decoded = decodeClaimDecision({ decision: "approved", reasons: [] });
@@ -86,6 +128,27 @@ describe("decodeClaimDecision", () => {
 
   it("throws on non-JSON string", () => {
     expect(() => decodeClaimDecision("not json")).toThrow(/not valid JSON/);
+  });
+});
+
+describe("decodeSubmitClaimResult", () => {
+  it("decodes a valid submit result", () => {
+    const decoded = decodeSubmitClaimResult({
+      status: "queued",
+      claim_id: "CLM-104",
+      insurer_reference: "PAY-CLM-104",
+      sanitized: true,
+      pii_echoed: false
+    });
+
+    expect(decoded.status).toBe("queued");
+    expect(decoded.insurer_reference).toBe("PAY-CLM-104");
+    expect(decoded.sanitized).toBe(true);
+    expect(decoded.pii_echoed).toBe(false);
+  });
+
+  it("throws on malformed submit output", () => {
+    expect(() => decodeSubmitClaimResult({ status: "queued" })).toThrow(/missing/);
   });
 });
 

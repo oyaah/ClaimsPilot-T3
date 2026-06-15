@@ -1,0 +1,37 @@
+package host:interfaces@2.1.0;
+
+/// PII-safe HTTP for tenant contracts. Body bytes may contain
+/// `{{profile.<field>}}` markers that the host substitutes from the calling
+/// user's profile at dispatch time, so the contract WASM never holds plaintext
+/// PII.
+interface http-with-placeholders {
+  enum verb {
+    get,
+    post,
+    put,
+    patch,
+    delete
+  }
+
+  record request {
+    method: verb,
+    url: string,
+    headers: option<list<tuple<string, string>>>,
+    payload: option<list<u8>>
+  }
+
+  record response {
+    code: u16,
+    payload: list<u8>
+  }
+
+  variant http-error {
+    egress-denied(string),
+    placeholder-denied(string),
+    placeholder-unknown(string),
+    placeholder-no-user-context,
+    upstream-error(string),
+  }
+
+  call: func(request: request) -> result<response, http-error>;
+}

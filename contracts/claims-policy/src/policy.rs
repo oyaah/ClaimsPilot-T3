@@ -40,6 +40,29 @@ pub struct ClaimDecision {
     pub reasons: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct SubmitClaimInput {
+    pub claim_id: String,
+    pub amount_usd: u64,
+    pub claimant_ref: String,
+    pub destination_url: String,
+    pub idempotency_key: String,
+    /// Placeholder markers only. Resolved PII values must never be contract
+    /// arguments.
+    pub placeholders: Vec<String>,
+    pub allowed_placeholders: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SubmitClaimResult {
+    pub status: String,
+    pub claim_id: String,
+    pub insurer_reference: Option<String>,
+    pub sanitized: bool,
+    pub pii_echoed: bool,
+}
+
 /// Evaluate a claim against its grant. Mirrors `evaluateClaimPolicy` in
 /// `lib/domain/policy.ts`: same checks, same ordering, same escalation rule.
 pub fn evaluate_claim(input: &ClaimInput) -> ClaimDecision {
@@ -99,6 +122,50 @@ pub fn evaluate_claim(input: &ClaimInput) -> ClaimDecision {
         decision: decision.to_string(),
         reasons,
     }
+}
+
+pub fn validate_submit_claim_input(input: &SubmitClaimInput) -> Result<(), String> {
+    if input.claim_id.trim().is_empty() {
+        return Err("submit-claim: claim_id is required".to_string());
+    }
+    if input.destination_url.trim().is_empty() {
+        return Err("submit-claim: destination_url is required".to_string());
+    }
+    if input.idempotency_key.trim().len() < 4 {
+        return Err("submit-claim: idempotency_key is too short".to_string());
+    }
+    if input
+        .placeholders
+        .iter()
+        .any(|field| !input.allowed_placeholders.contains(field))
+    {
+        return Err("placeholder_not_permitted".to_string());
+    }
+    Ok(())
+}
+
+pub fn build_submit_payload(input: &SubmitClaimInput) -> Result<serde_json::Value, String> {
+    validate_submit_claim_input(input)?;
+    let mut claimant = serde_json::Map::new();
+    for placeholder in &input.placeholders {
+        let key = match placeholder.as_str() {
+            "{{profile.first_name}}" => "firstName",
+            "{{profile.last_name}}" => "lastName",
+            "{{profile.date_of_birth}}" => "dateOfBirth",
+            "{{profile.verified_contacts.email.value}}" => "email",
+            _ => return Err(format!("unsupported placeholder: {placeholder}")),
+        };
+        claimant.insert(key.to_string(), serde_json::json!(placeholder));
+    }
+
+    Ok(serde_json::json!({
+        "claimId": input.claim_id,
+        "amountUsd": input.amount_usd,
+        "idempotencyKey": input.idempotency_key,
+        "claimantRef": input.claimant_ref,
+        "claimant": claimant,
+        "placeholders": input.placeholders
+    }))
 }
 
 #[cfg(test)]
@@ -197,6 +264,72 @@ mod tests {
         let d = evaluate_claim(&i);
         assert_eq!(d.decision, "denied");
         assert!(d.reasons.contains(&"placeholder_not_permitted".to_string()));
+    }
+
+    fn valid_submit_input() -> SubmitClaimInput {
+        SubmitClaimInput {
+            claim_id: "CLM-104".into(),
+            amount_usd: 420,
+            claimant_ref: "claimant_104".into(),
+            destination_url: "https://claimspilot.example.com/api/mock-insurer/payouts".into(),
+            idempotency_key: "CLM-104:grant_demo:420".into(),
+            placeholders: vec![
+                "{{profile.first_name}}".into(),
+                "{{profile.last_name}}".into(),
+                "{{profile.date_of_birth}}".into(),
+                "{{profile.verified_contacts.email.value}}".into(),
+            ],
+            allowed_placeholders: vec![
+                "{{profile.first_name}}".into(),
+                "{{profile.last_name}}".into(),
+                "{{profile.date_of_birth}}".into(),
+                "{{profile.verified_contacts.email.value}}".into(),
+            ],
+        }
+    }
+
+    #[test]
+    fn submit_payload_contains_only_placeholder_markers() {
+        let mut input = valid_submit_input();
+        input.placeholders = vec![
+            "{{profile.first_name}}".into(),
+            "{{profile.last_name}}".into(),
+        ];
+        let payload = build_submit_payload(&input).unwrap();
+        let serialized = serde_json::to_string(&payload).unwrap();
+
+        assert!(serialized.contains("{{profile.first_name}}"));
+        assert!(serialized.contains("{{profile.last_name}}"));
+        assert!(!serialized.contains("{{profile.date_of_birth}}"));
+        assert!(!serialized.contains("Jane"));
+        assert!(!serialized.contains("Doe"));
+    }
+
+    #[test]
+    fn submit_input_rejects_unknown_raw_pii_fields() {
+        let raw = serde_json::json!({
+            "claim_id": "CLM-104",
+            "amount_usd": 420,
+            "claimant_ref": "claimant_104",
+            "destination_url": "https://claimspilot.example.com/api/mock-insurer/payouts",
+            "idempotency_key": "CLM-104:grant_demo:420",
+            "placeholders": ["{{profile.first_name}}"],
+            "allowed_placeholders": ["{{profile.first_name}}"],
+            "first_name": "Jane"
+        });
+
+        let parsed = serde_json::from_value::<SubmitClaimInput>(raw);
+        assert!(parsed.is_err());
+    }
+
+    #[test]
+    fn submit_input_rejects_unpermitted_placeholder() {
+        let mut input = valid_submit_input();
+        input.placeholders = vec!["{{profile.ssn}}".into()];
+
+        let result = build_submit_payload(&input);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "placeholder_not_permitted");
     }
 
     #[test]

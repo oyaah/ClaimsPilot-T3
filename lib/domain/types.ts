@@ -71,6 +71,7 @@ export type AuditEvent = {
     | "claim.evaluate"
     | "claim.approve"
     | "claim.deny"
+    | "claim.submit"
     | "grant.escalate"
     | "grant.revoke"
     | "t3.status";
@@ -84,4 +85,3 @@ export type AuditEvent = {
   mode: "live" | "demo" | "error";
   message: string;
 };
-

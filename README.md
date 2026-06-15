@@ -37,9 +37,10 @@ Open `http://localhost:3000`.
 
 ## Real T3N Contract
 
-The claim decision runs in a real Terminal 3 contract, not just local
-TypeScript. `contracts/claims-policy` compiles to a `wasm32-wasip2` WASM
-component exporting `claimspilot:claims-policy/contracts@0.1.0`.
+The claim decision and approved-claim submit path run in a real Terminal 3
+contract, not just local TypeScript. `contracts/claims-policy` compiles to a
+`wasm32-wasip2` WASM component exporting
+`claimspilot:claims-policy/contracts@0.2.0`.
 
 ```bash
 npm run t3:build-contract   # cargo build --target wasm32-wasip2 --release
@@ -47,11 +48,12 @@ npm run t3:register         # register on T3N testnet (needs T3N_API_KEY)
 npm run t3:invoke           # live approved + escalated/denied proof
 ```
 
-The contract is **policy-only** (carries no PII). When a registration exists and
-demo mode is off, the app evaluates claims through the live T3N contract and
+`evaluate-claim` is policy-only and carries no PII. When a registration exists
+and demo mode is off, the app evaluates claims through the live T3N contract and
 marks each audit row `live`; otherwise it uses the deterministic local policy.
-The PII-bearing insurer call (`http-with-placeholders`) is the next milestone.
-See `docs/TERMINAL3-INTEGRATION.md` and `docs/DEPLOYMENT.md`.
+After a live approval, `submit-claim` calls the insurer through
+`http-with-placeholders`, using profile markers that T3N resolves inside the
+TEE. See `docs/TERMINAL3-INTEGRATION.md` and `docs/DEPLOYMENT.md`.
 
 ## Terminal 3 Setup
 
@@ -62,6 +64,7 @@ T3N_API_KEY=your_terminal3_sandbox_key
 NEXT_PUBLIC_T3_DID=your_claimed_did
 CLAIMSPILOT_T3_ENVIRONMENT=testnet
 CLAIMSPILOT_DEMO_MODE=false
+CLAIMSPILOT_INSURER_BASE_URL=https://your-public-app.example.com
 ```
 
 The app never commits local keys. If `T3N_API_KEY` is missing, the T3 status panel clearly shows demo mode.
@@ -110,7 +113,7 @@ Demo:
 
 - Claims, grants, mock insurer, and audit rows use a seeded local JSON demo store.
 - When no contract registration exists (or demo mode is on), the decision uses the deterministic local policy that the Rust contract mirrors 1:1.
-- Placeholder substitution (`http-with-placeholders`) is the next contract milestone; the current live contract is policy-only.
+- Placeholder submission (`http-with-placeholders`) is wired for live approved claims; it still requires a public insurer URL plus a T3N user profile and allowed-host grant to prove resolved PII.
 
 ## No Raw PII In Agent Context
 

@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: claimspilot-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: CLAIMSPILOT_T3_ENVIRONMENT
+        value: testnet
+      - key: CLAIMSPILOT_DEMO_MODE
+        value: "false"
+      - key: CLAIMSPILOT_INSURER_BASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_T3_DID
+        sync: false
+      - key: DID
+        sync: false
+      - key: T3N_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4.1-mini
+      - key: CLAIMSPILOT_CONTRACT_SCRIPT_NAME
+        sync: false
+      - key: CLAIMSPILOT_CONTRACT_VERSION
+        value: 0.2.0
+      - key: CLAIMSPILOT_CONTRACT_TENANT_DID
+        sync: false
+      - key: CLAIMSPILOT_CONTRACT_TAIL
+        value: claims-policy
+      - key: CLAIMSPILOT_CONTRACT_ID
+        sync: false
+      - key: CLAIMSPILOT_CONTRACT_REGISTERED_AT
+        sync: false

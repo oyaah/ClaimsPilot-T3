@@ -1,41 +1,47 @@
 # claims-policy
 
-ClaimsPilot's protected claim-decision contract for Terminal 3 / T3N.
+ClaimsPilot's protected claim contract for Terminal 3 / T3N.
 
 A Rust → `wasm32-wasip2` **WASM component** that runs inside the Trinity TEE and
-decides **allow / deny / needs-escalation** for an insurance claim against the
-caller's delegated grant.
+decides **allow / deny / needs-escalation** for an insurance claim, then submits
+approved claims through Terminal 3 placeholder outbound HTTP.
 
-## Policy-only — carries no PII
+## Decision + Placeholder Submit
 
-This contract is the first proof milestone: a real, registrable, invocable T3N
-contract that enforces the claim decision off the app server. Its input is the
-sanitized policy envelope only (`policy::ClaimInput`) — amounts, claim type,
-region, grant scope, identity/host flags. It contains **no** claimant name,
-document, or contact data.
+`evaluate-claim` is policy-only. Its input is the sanitized policy envelope
+(`policy::ClaimInput`) — amounts, claim type, region, grant scope,
+identity/host flags. It contains **no** claimant name, document, or contact
+data.
 
-The PII-bearing insurer call is a separate, later milestone (`U6`) that uses
-`host:interfaces/http-with-placeholders` so plaintext claimant PII is resolved
-inside the TEE and never enters WASM memory or the agent prompt.
+`submit-claim` is the U6 proof layer. It templates `{{profile.*}}` markers into
+the insurer payload and calls `host:interfaces/http-with-placeholders`, so
+plaintext claimant PII is resolved inside the TEE and never enters WASM memory
+or the agent prompt.
 
 ## Interface
 
 ```wit
-package claimspilot:claims-policy@0.1.0;
+package claimspilot:claims-policy@0.2.0;
 
 world claims-policy {
+  import host:interfaces/http-with-placeholders@2.1.0;
   export contracts;
 }
 
 interface contracts {
   record generic-input { input: option<list<u8>>, user-profile: option<list<u8>>, context: option<list<u8>> }
   evaluate-claim: func(req: generic-input) -> result<list<u8>, string>;
+  submit-claim: func(req: generic-input) -> result<list<u8>, string>;
 }
 ```
 
-- Input JSON: `ClaimInput` (sanitized policy envelope).
-- Output JSON: `ClaimDecision { decision, reasons }`, with `decision` one of
+- `evaluate-claim` input JSON: `ClaimInput` (sanitized policy envelope).
+- `evaluate-claim` output JSON: `ClaimDecision { decision, reasons }`, with `decision` one of
   `approved | denied | needs_escalation` and snake_case `reasons`.
+- `submit-claim` input JSON: `SubmitClaimInput` (URL, claim metadata,
+  idempotency key, and placeholder markers only).
+- `submit-claim` output JSON: `SubmitClaimResult { status, claim_id,
+  insurer_reference }`.
 
 The decision logic is a 1:1 parity oracle for `lib/domain/policy.ts`, so the app
 can compare live contract output against the local policy during rollout.
@@ -52,7 +58,7 @@ Verify the component interface:
 
 ```bash
 wasm-tools component wit target/wasm32-wasip2/release/claims_policy.wasm
-# => export claimspilot:claims-policy/contracts@0.1.0;
+# => export claimspilot:claims-policy/contracts@0.2.0;
 ```
 
 ## Test (native)

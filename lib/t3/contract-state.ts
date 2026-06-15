@@ -29,6 +29,9 @@ function statePath(): string {
 }
 
 export function readContractRegistration(): ContractRegistration | null {
+  const envRegistration = readEnvContractRegistration();
+  if (envRegistration) return envRegistration;
+
   const file = statePath();
   if (!existsSync(file)) return null;
   try {
@@ -44,4 +47,20 @@ export function writeContractRegistration(registration: ContractRegistration): v
 
 export function hasContractRegistration(): boolean {
   return readContractRegistration() !== null;
+}
+
+function readEnvContractRegistration(): ContractRegistration | null {
+  const scriptName = process.env.CLAIMSPILOT_CONTRACT_SCRIPT_NAME?.trim();
+  const tenantDid = process.env.CLAIMSPILOT_CONTRACT_TENANT_DID?.trim() || process.env.DID?.trim();
+  if (!scriptName || !tenantDid) return null;
+
+  return {
+    tail: process.env.CLAIMSPILOT_CONTRACT_TAIL?.trim() || "claims-policy",
+    version: process.env.CLAIMSPILOT_CONTRACT_VERSION?.trim() || "0.2.0",
+    scriptName,
+    environment: process.env.CLAIMSPILOT_T3_ENVIRONMENT === "production" ? "production" : "testnet",
+    contractId: process.env.CLAIMSPILOT_CONTRACT_ID?.trim() || undefined,
+    registeredAt: process.env.CLAIMSPILOT_CONTRACT_REGISTERED_AT?.trim() || new Date(0).toISOString(),
+    tenantDid
+  };
 }

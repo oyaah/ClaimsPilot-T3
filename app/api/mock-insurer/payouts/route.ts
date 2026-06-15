@@ -5,6 +5,14 @@ const payoutSchema = z.object({
   amountUsd: z.number().positive(),
   idempotencyKey: z.string().min(4),
   claimantRef: z.string(),
+  claimant: z
+    .object({
+      firstName: z.string().optional(),
+      lastName: z.string().optional(),
+      dateOfBirth: z.string().optional(),
+      email: z.string().optional()
+    })
+    .optional(),
   placeholders: z.array(z.string()).default([])
 });
 
@@ -34,4 +42,3 @@ export async function POST(request: Request) {
     piiEchoed: false
   });
 }
-

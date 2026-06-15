@@ -137,8 +137,15 @@ export function evaluateClaim(claimId: string, agentDid = DEFAULT_AGENT_DID): Po
 export async function evaluateClaimWithSource(
   claimId: string,
   agentDid = DEFAULT_AGENT_DID
-): Promise<PolicyDecision & { source: "live" | "demo" | "error" }> {
-  const { getDecisionSource, evaluateClaimViaContract } = await import("@/lib/t3/decision-source");
+): Promise<
+  PolicyDecision & {
+    source: "live" | "demo" | "error";
+    outbound?: { status: string; insurerReference?: string };
+  }
+> {
+  const { getDecisionSource, evaluateClaimViaContract, submitClaimViaContract } = await import(
+    "@/lib/t3/decision-source"
+  );
   if (getDecisionSource() !== "live") {
     return { ...evaluateClaim(claimId, agentDid), source: "demo" };
   }
@@ -156,6 +163,7 @@ export async function evaluateClaimWithSource(
   let source: "live" | "error" = "live";
   let message: string;
   let mode: AuditEvent["mode"] = "live";
+  let outbound: { status: string; insurerReference?: string } | undefined;
 
   try {
     const live = await evaluateClaimViaContract(claim, state.grant, agentDid, { replayed });
@@ -182,6 +190,40 @@ export async function evaluateClaimWithSource(
     message
   });
 
+  if (source === "live" && decision.decision === "approved") {
+    try {
+      const submitted = await submitClaimViaContract(claim, state.grant, { idempotencyKey: nonce });
+      outbound = { status: submitted.status, insurerReference: submitted.insurerReference };
+      appendAudit(state, {
+        action: "claim.submit",
+        decision: "approved",
+        agentDid,
+        claimId: claim.id,
+        grantId: state.grant.id,
+        amountUsd: claim.amountUsd,
+        host: claim.destinationHost,
+        mode: "live",
+        reason: "live",
+        message: `Placeholder outbound ${submitted.scriptName}@${submitted.scriptVersion}: ${submitted.status}${submitted.insurerReference ? ` (${submitted.insurerReference})` : ""}.`
+      });
+    } catch (error) {
+      const failure = classifyOutboundFailure(error);
+      outbound = { status: failure.status };
+      appendAudit(state, {
+        action: "claim.submit",
+        decision: "denied",
+        agentDid,
+        claimId: claim.id,
+        grantId: state.grant.id,
+        amountUsd: claim.amountUsd,
+        host: claim.destinationHost,
+        mode: failure.mode,
+        reason: failure.reason,
+        message: failure.message
+      });
+    }
+  }
+
   if (decision.decision === "approved") {
     state.usedNonces.push(nonce);
     claim.status = "approved";
@@ -192,7 +234,7 @@ export async function evaluateClaimWithSource(
   }
 
   writeState(state);
-  return { ...decision, source };
+  return { ...decision, source, outbound };
 }
 
 export function escalateGrant(maxAmountUsd: number, claimType: Grant["allowedClaimTypes"][number]): Grant {
@@ -232,4 +274,36 @@ function appendAudit(state: StoreState, event: Omit<AuditEvent, "id" | "at">): A
   };
   state.audit.push(row);
   return row;
+}
+
+function classifyOutboundFailure(error: unknown): {
+  status: string;
+  reason: AuditEvent["reason"];
+  mode: AuditEvent["mode"];
+  message: string;
+} {
+  const message = error instanceof Error ? error.message : String(error);
+  const normalized = message.toLowerCase();
+  if (normalized.includes("egress denied") || normalized.includes("host_not_allowed")) {
+    return {
+      status: "egress_denied",
+      reason: "host_not_allowed",
+      mode: "live",
+      message: `T3N placeholder outbound denied by allowed-host grant: ${message}`
+    };
+  }
+  if (normalized.includes("placeholder")) {
+    return {
+      status: "placeholder_denied",
+      reason: "placeholder_not_permitted",
+      mode: "live",
+      message: `T3N placeholder outbound denied by profile-placeholder policy: ${message}`
+    };
+  }
+  return {
+    status: "submit_error",
+    reason: "error",
+    mode: "error",
+    message: `T3N placeholder outbound failed: ${message}`
+  };
 }
