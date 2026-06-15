@@ -13,3 +13,4 @@ build/
 
 # Rust contract build output
 contracts/**/target/
+.vercel
