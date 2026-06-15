@@ -33,7 +33,7 @@ function statePath() {
 }
 
 function readState(): StoreState {
-  if (process.env.VITEST) {
+  if (usesMemoryStore()) {
     memoryState ??= seedState();
     return memoryState;
   }
@@ -49,12 +49,16 @@ function readState(): StoreState {
 }
 
 function writeState(nextState: StoreState): void {
-  if (process.env.VITEST) {
+  if (usesMemoryStore()) {
     memoryState = nextState;
     return;
   }
 
   writeFileSync(statePath(), `${JSON.stringify(nextState, null, 2)}\n`);
+}
+
+function usesMemoryStore(): boolean {
+  return Boolean(process.env.VITEST || process.env.VERCEL);
 }
 
 export function listClaims(): Claim[] {

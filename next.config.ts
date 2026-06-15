@@ -7,12 +7,14 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@terminal3/t3n-sdk"],
   async rewrites() {
     if (!backendUrl) return [];
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${backendUrl}/api/:path*`
-      }
-    ];
+    return {
+      beforeFiles: [
+        {
+          source: "/api/:path*",
+          destination: `${backendUrl}/api/:path*`
+        }
+      ]
+    };
   }
 };
 
