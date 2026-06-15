@@ -1,127 +1,194 @@
 # ClaimsPilot
 
-ClaimsPilot is a Terminal 3 ADK bounty build: an AI insurance claims agent that can investigate and submit claim decisions, while payout execution and private claimant data stay behind Terminal 3-style protected actions.
+ClaimsPilot is a live Terminal 3 ADK insurance-claims agent. The AI can investigate and recommend a claim decision, but payout execution and claimant PII are controlled by T3N identity, user grants, a real WASM contract, placeholder outbound HTTP, and an audit trail.
 
 The agent can recommend. The protected-action layer decides.
 
-## Why It Matters
+## Live Submission
 
-Insurance claims are full of PII, approvals, and money movement. Giving an AI agent raw claimant identity, policy data, medical context, and payout authority is a bad security model. ClaimsPilot shows the safer pattern:
-
-- agent identity through Terminal 3 / T3N
-- scoped user grants for claim type, region, host, and payout cap
-- TEE-style policy checks before execution
-- `http-with-placeholders` style private data substitution
-- audit rows for every allow, deny, escalation, and revocation
-
-## Demo Flow
-
-1. Open the command center.
-2. Run `CLM-104`, a `$420` phone claim. It is approved.
-3. Run `CLM-219`, a `$4,800` medical claim. It is blocked and marked for escalation.
-4. Escalate the grant.
-5. Retry the high-value claim.
-6. Revoke the agent.
-7. Verify old actions are blocked and audit rows explain why.
-
-## Quick Start
-
-```bash
-npm install
-npm run verify
-npm run test
-npm run dev
-```
-
-Open `http://localhost:3000`.
-
-## Real T3N Contract
-
-The claim decision and approved-claim submit path run in a real Terminal 3
-contract, not just local TypeScript. `contracts/claims-policy` compiles to a
-`wasm32-wasip2` WASM component exporting
-`claimspilot:claims-policy/contracts@0.2.0`.
-
-```bash
-npm run t3:build-contract   # cargo build --target wasm32-wasip2 --release
-npm run t3:register         # register on T3N testnet (needs T3N_API_KEY)
-npm run t3:invoke           # live approved + escalated/denied proof
-```
-
-`evaluate-claim` is policy-only and carries no PII. When a registration exists
-and demo mode is off, the app evaluates claims through the live T3N contract and
-marks each audit row `live`; otherwise it uses the deterministic local policy.
-After a live approval, `submit-claim` calls the insurer through
-`http-with-placeholders`, using profile markers that T3N resolves inside the
-TEE. See `docs/TERMINAL3-INTEGRATION.md` and `docs/DEPLOYMENT.md`.
-
-## Terminal 3 Setup
-
-Copy `.env.example` to `.env.local` and set:
-
-```bash
-T3N_API_KEY=your_terminal3_sandbox_key
-NEXT_PUBLIC_T3_DID=your_claimed_did
-CLAIMSPILOT_T3_ENVIRONMENT=testnet
-CLAIMSPILOT_DEMO_MODE=false
-CLAIMSPILOT_INSURER_BASE_URL=https://your-public-app.example.com
-```
-
-The app never commits local keys. If `T3N_API_KEY` is missing, the T3 status panel clearly shows demo mode.
-
-## Live Agent Setup
-
-Set these in `.env.local` to make `/dashboard/agent` use OpenAI for the claim narrative while the protected policy decision remains deterministic:
-
-```bash
-OPENAI_API_KEY=your_openai_key
-OPENAI_MODEL=gpt-4.1-mini
-```
-
-If `OPENAI_API_KEY` is missing, or `CLAIMSPILOT_DEMO_MODE=true`, the agent page uses the deterministic planner.
-
-## Project Shape
-
-- `app/` - Next.js app routes and dashboard pages
-- `components/` - shared UI shell and status badges
-- `lib/domain/` - claims, grants, audit, policy logic
-- `lib/t3/` - Terminal 3 SDK adapter
-- `lib/agent/` - deterministic claims-agent planner
-- `contracts/claims-policy/` - real Rust `wasm32-wasip2` T3N contract component
-- `docs/` - demo script and submission docs
-- `BUGS.md` / `TERMINAL3_CLAIMSPILOT_CONFIRMED_BUG_REPORT.md` - verified SDK/docs bug-bounty report
-- `HANDOFF.md` - teammate runbook and current live/demo context
-
-## Bounty Alignment
-
-| Criterion | ClaimsPilot evidence |
+| Surface | Link |
 | --- | --- |
-| Completeness | Runnable dashboard, seeded claims, grants, audit, agent planner, mock insurer API, tests, docs |
-| SDK integration | T3 SDK adapter, DID status, real `wasm32-wasip2` contract registered/invoked via `tenant.contracts.register` + `executeAndDecode`, source-aware live/demo decision, protected action flow |
-| Creativity | Insurance claims agent with private last-mile execution and visible denial matrix |
-| Bug bounty | Separate reproducible issue ledger from real integration friction |
+| Live app | https://claimspilot-t3-bounty.vercel.app |
+| Live backend proof | https://claimspilot-backend.onrender.com |
+| T3N status | https://claimspilot-backend.onrender.com/dashboard/t3-status |
+| Audit proof | https://claimspilot-backend.onrender.com/dashboard/audit |
+| Submission one-pager | [docs/SUBMISSION.md](docs/SUBMISSION.md) |
+| Live proof log | [docs/LIVE-PROOF.md](docs/LIVE-PROOF.md) |
+| Demo video script | [docs/VIDEO-SCRIPT.md](docs/VIDEO-SCRIPT.md) |
+| Bug bounty report | [BUGS.md](BUGS.md) |
 
-## Live vs Demo Boundary
+## Problem
 
-Live:
+Insurance claims are full of PII, approvals, and money movement. A useful claims agent needs enough context to help, but it should not hold raw identity data or unlimited payout authority. A compromised or hallucinating model must not be able to submit arbitrary payouts.
 
-- T3N SDK status uses the documented handshake/authenticate flow when `T3N_API_KEY` is present.
-- The app surfaces DID, token usage, and SDK errors honestly.
-- The agent dashboard uses OpenAI for live claim reasoning when `OPENAI_API_KEY` is present and demo mode is false.
+ClaimsPilot shows the safer pattern:
 
-Demo:
+- live T3N DID authentication for the agent/operator
+- scoped grants for claim type, region, host, and payout cap
+- a real `wasm32-wasip2` Terminal 3 contract for policy decisions
+- `http-with-placeholders` for the PII-bearing insurer call
+- allowed-host egress enforcement by the user's grant
+- audit rows for allow, deny, escalation, revocation, and submit outcomes
 
-- Claims, grants, mock insurer, and audit rows use a seeded local JSON demo store.
-- When no contract registration exists (or demo mode is on), the decision uses the deterministic local policy that the Rust contract mirrors 1:1.
-- Placeholder submission (`http-with-placeholders`) is wired for live approved claims; it still requires a public insurer URL plus a T3N user profile and allowed-host grant to prove resolved PII.
+## What Judges Should See
 
-## No Raw PII In Agent Context
+1. Open the live app and run `CLM-104`, a `$420` phone claim.
+   - Expected: live approved policy decision.
+   - Audit adds `claim.approve`.
+2. Open Audit.
+   - Expected: live `claim.submit` row from `submit-claim`.
+   - U6 proof captured: `PAY-CLM-104`, `sanitized: true`, `piiEchoed: false`.
+3. Open T3 status.
+   - Expected: `LIVE`, DID `did:t3n:dc851f7daab01b36a986b212e49673c2bc00f904`, testnet credits.
+4. Run or discuss `CLM-219`, a `$4,800` medical claim.
+   - Expected: `needs_escalation` because the agent cannot self-raise its grant.
+5. Review [docs/LIVE-PROOF.md](docs/LIVE-PROOF.md).
+   - Shows registered `claims-policy@0.2.0`, approved/escalated live invokes, U6 success, and ungranted-host denial.
 
-Claimant details use display names and references. Sensitive fields are represented as placeholders such as:
+## Terminal 3 Integration
+
+The claim decision and approved-claim submit path run in a real Terminal 3 contract, not just local TypeScript.
+
+`contracts/claims-policy` compiles to a `wasm32-wasip2` WASM component exporting:
+
+```text
+claimspilot:claims-policy/contracts@0.2.0
+  evaluate-claim(...)
+  submit-claim(...)
+```
+
+The registered testnet contract is:
+
+```text
+z:dc851f7daab01b36a986b212e49673c2bc00f904:claims-policy@0.2.0
+```
+
+`evaluate-claim` is policy-only and carries no PII. After a live approval, `submit-claim` sends the insurer payload through `host:interfaces/http-with-placeholders@2.1.0`. The WASM input contains only placeholder markers:
 
 - `{{profile.first_name}}`
 - `{{profile.last_name}}`
 - `{{profile.date_of_birth}}`
 - `{{profile.verified_contacts.email.value}}`
 
-The agent-visible payload shows placeholders or redacted references, not raw identity data.
+T3N resolves those inside the enclave just before outbound HTTP. The contract and agent never receive plaintext profile values.
+
+## Live Proof Captured
+
+U6 placeholder outbound is complete.
+
+Granted-host success:
+
+```text
+submit-claim -> approved
+script: z:dc851f7daab01b36a986b212e49673c2bc00f904:claims-policy@0.2.0
+status: queued
+claimId: CLM-104
+insurerReference: PAY-CLM-104
+sanitized: true
+piiEchoed: false
+```
+
+Ungranted-host denial:
+
+```text
+submit-claim -> denied
+message: egress denied for host example.com
+```
+
+That denial matters: the outbound host is authorized by the user's grant, not by a hard-coded app allowlist.
+
+## Architecture
+
+```text
+Claims manager
+  -> ClaimsPilot dashboard
+  -> OpenAI planner writes narrative only
+  -> T3N contract evaluate-claim enforces grant/policy
+  -> T3N http-with-placeholders resolves profile markers in enclave
+  -> Mock insurer API receives sanitized payout instruction
+  -> Audit trail records decision, source, script, and reason
+```
+
+Core files:
+
+- `contracts/claims-policy/` - Rust WASM contract with `evaluate-claim` and `submit-claim`
+- `lib/t3/` - T3N SDK adapter, contract registration, invoke, decode helpers
+- `lib/domain/` - seeded claims, grants, policy parity oracle, audit store
+- `lib/agent/` - OpenAI-backed planner whose output cannot override policy
+- `app/dashboard/*` - command, agent, grants, audit, T3 status, submission pages
+- `docs/LIVE-PROOF.md` - sanitized live outputs
+
+## Demo Flow
+
+Use [docs/VIDEO-SCRIPT.md](docs/VIDEO-SCRIPT.md) for the 4-5 minute recording.
+
+Short version:
+
+1. Start with the problem: claims automation is useful, but raw PII plus payout authority is dangerous.
+2. Show live T3 status.
+3. Show the registered contract and U6 proof in `docs/LIVE-PROOF.md`.
+4. Run `CLM-104` and show approval plus `claim.submit`.
+5. Run or explain `CLM-219` and show escalation.
+6. Close on the core point: the model writes the narrative; T3N controls the action.
+
+## Local Quick Start
+
+```bash
+npm install
+npm run verify
+npm test
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+For live T3N mode, copy `.env.example` to `.env.local` and set:
+
+```bash
+T3N_API_KEY=...
+OPENAI_API_KEY=...
+NEXT_PUBLIC_T3_DID=did:t3n:dc851f7daab01b36a986b212e49673c2bc00f904
+CLAIMSPILOT_T3_ENVIRONMENT=testnet
+CLAIMSPILOT_DEMO_MODE=false
+CLAIMSPILOT_INSURER_BASE_URL=https://claimspilot-backend.onrender.com
+CLAIMSPILOT_CONTRACT_SCRIPT_NAME=z:dc851f7daab01b36a986b212e49673c2bc00f904:claims-policy
+CLAIMSPILOT_CONTRACT_VERSION=0.2.0
+CLAIMSPILOT_CONTRACT_TENANT_DID=did:t3n:dc851f7daab01b36a986b212e49673c2bc00f904
+```
+
+Secrets are never committed. `.env.local` and `.claimspilot-state/` are gitignored.
+
+## Contract Commands
+
+```bash
+npm run t3:build-contract
+npm run t3:register
+npm run t3:invoke
+```
+
+Verify the component interface:
+
+```bash
+wasm-tools component wit contracts/claims-policy/target/wasm32-wasip2/release/claims_policy.wasm
+```
+
+Expected:
+
+```text
+import host:interfaces/http-with-placeholders@2.1.0
+export claimspilot:claims-policy/contracts@0.2.0
+```
+
+## Bounty Alignment
+
+| Criterion | ClaimsPilot evidence |
+| --- | --- |
+| Completeness | Live Next.js app, Render Node backend, claims queue, grants UI, audit dashboard, OpenAI planner, mock insurer API, tests, deployment docs |
+| SDK integration | T3N SDK handshake/authenticate, live DID/credits, `tenant.contracts.register`, `executeAndDecode`, real WASM component, user profile OTP, self-grant, placeholder outbound |
+| Creativity | Insurance claims workflow with private last-mile payout execution and visible denial matrix |
+| Trust story | The agent does not see raw PII or hold unlimited payout authority; Terminal 3 enforces identity, grants, egress, and auditability |
+| Bug track | Separate source-verified SDK/docs report in [BUGS.md](BUGS.md) |
+
+## Honest Boundary
+
+This is a bounty-grade live testnet deployment, not an insurer production system. The production path would move audit/proof storage to Postgres, manage secrets with a cloud secret manager, and replace the mock insurer endpoint with a partner API. The Terminal 3 control path is real: live auth, live contract registration/invoke, live placeholder outbound, and live grant-denied egress proof are captured.

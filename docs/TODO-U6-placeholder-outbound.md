@@ -1,4 +1,4 @@
-# TODO — U6: Placeholder-Outbound Insurer Call (next milestone)
+# Completed — U6: Placeholder-Outbound Insurer Call
 
 Status: **complete**. The contract/app path is wired for `submit-claim` through
 `http-with-placeholders`, and live proof is captured with both granted-host

@@ -13,7 +13,7 @@ The important story:
 
 ## Repo Status
 
-Branch: `codex/claimspilot-build`
+Branch: `codex/u6-placeholder-outbound`
 
 Primary files:
 
@@ -147,9 +147,9 @@ The live OpenAI planner lives in:
   `npm run t3:invoke` → live approved + escalated/denied proof.
 - App is source-aware (`lib/t3/decision-source.ts`): live T3N contract when
   configured + registered, else local demo; audit rows mark `live`/`demo`/`error`.
-- U6 code is wired: `submit-claim` uses `http-with-placeholders` after a live
-  approval and audits `host_not_allowed` egress denial as its own outcome.
-  Live proof still needs profile + allowed-host grant setup.
+- U6 is complete: `submit-claim` uses `http-with-placeholders` after a live
+  approval, the T3N profile + self-grant are configured, granted-host submit
+  succeeds with `PAY-CLM-104`, and ungranted-host egress denial is captured.
 - Deployment: see `docs/DEPLOYMENT.md` (Vercel+Render minimum, Cloud Run prod).
 
 ## Known Issues / Risks
@@ -168,6 +168,5 @@ The live OpenAI planner lives in:
 3. Add screenshots to `docs/LIVE-PROOF.md` (t3-status, agent, audit `live` rows).
 4. Submit build + `BUGS.md` separately so the product pitch stays clean.
 5. Submit `TERMINAL3_CLAIMSPILOT_CONFIRMED_BUG_REPORT.md` for the bug track.
-6. Finish U6 live proof: register `0.2.0`, configure profile + allowed-host
-   grant + public insurer URL, then paste sanitized egress-denied and success
-   output into `docs/LIVE-PROOF.md`.
+6. Record the final demo video using `docs/VIDEO-SCRIPT.md`, upload it, and add
+   the YouTube link to the bounty submission form.

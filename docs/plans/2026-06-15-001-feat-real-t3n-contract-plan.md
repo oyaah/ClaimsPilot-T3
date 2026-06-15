@@ -235,7 +235,7 @@ The tree is the expected shape. Implementation can adjust file splits if the SDK
 - **Approach:** Add a live proof section for registration and invocation outputs, update the demo script to show live contract status before the agent narrative, and make the handoff explicit about current proof level and remaining outbound placeholder work.
 - **Patterns to follow:** Existing concise docs; current `HANDOFF.md` warning style about rotating secrets.
 - **Test scenarios:** Test expectation: none -- documentation-only changes.
-- **Verification:** A judge can follow the docs from setup to live contract proof, and Parshiv can tell which pieces are complete versus pending.
+- **Verification:** A judge can follow the docs from setup to live contract proof, and Parshiv can tell which pieces are complete versus intentionally deferred production hardening.
 
 ---
 
