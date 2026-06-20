@@ -142,6 +142,7 @@ export async function planAgentActionLive(claim: Claim, grant: Grant): Promise<A
       model
     };
   } catch (error) {
+    console.warn(`[planner] OpenAI fallback (${classifyAgentError(error)})`);
     return {
       ...guardedPlan,
       source: "openai_fallback",
@@ -173,6 +174,14 @@ function extractJson(value: string): string {
 function normalizeAgentError(error: unknown): string {
   void error;
   return "Live planner unavailable; deterministic policy copy shown.";
+}
+
+function classifyAgentError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const status = message.match(/^OpenAI (\d{3}):/);
+  if (status) return `http_${status[1]}`;
+  if (message.includes("invalid header value")) return "invalid_api_key_header";
+  return "transport_or_parse_error";
 }
 
 function getOpenAiApiKey(): string {

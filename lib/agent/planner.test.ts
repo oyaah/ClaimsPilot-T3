@@ -51,6 +51,7 @@ describe("planAgentAction", () => {
   it("falls back when OpenAI is unavailable", async () => {
     process.env.OPENAI_API_KEY = "sk-test";
     process.env.CLAIMSPILOT_DEMO_MODE = "false";
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, status: 401, text: async () => "bad key" })));
 
     const claim = demoClaims.find((item) => item.id === "CLM-104")!;
@@ -60,5 +61,6 @@ describe("planAgentAction", () => {
     expect(plan.recommendedDecision).toBe("approved");
     expect(plan.error).toBe("Live planner unavailable; deterministic policy copy shown.");
     expect(plan.error).not.toContain("bad key");
+    expect(warn).toHaveBeenCalledWith("[planner] OpenAI fallback (http_401)");
   });
 });
