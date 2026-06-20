@@ -94,9 +94,9 @@ Use `docs/DEMO-SCRIPT.md`, but the short version is:
 3. Say OpenAI can write reasoning, but cannot override protected policy decisions.
 4. Open `/`.
 5. Run `CLM-104`; it should approve.
-6. Run `CLM-219`; it should need escalation because the amount exceeds the grant.
-7. Open `/dashboard/grants`; escalate the grant.
-8. Retry `CLM-219`; it should approve.
+6. Run `CLM-219`; the over-limit phone replacement claim should need escalation because the amount exceeds the grant.
+7. Open `/dashboard/grants`; escalate the application grant to reopen the claim.
+8. Retry `CLM-219`; the live T3N contract should approve it under the raised cap.
 9. Revoke the grant.
 10. Open `/dashboard/audit`; show every allow/deny/escalate/revoke row.
 11. Open `/dashboard/t3-status`; show live T3 status.
@@ -162,8 +162,9 @@ The live OpenAI planner lives in:
 
 1. Run `npm run t3:build-contract && npm run t3:register && npm run t3:invoke`; paste sanitized output into `docs/LIVE-PROOF.md`.
 2. Record the demo with live mode first; backup demo with `CLAIMSPILOT_DEMO_MODE=true`.
-3. Add screenshots to `docs/LIVE-PROOF.md` (t3-status, agent, audit `live` rows).
-4. Submit build + `BUGS.md` separately so the product pitch stays clean.
-5. Submit `TERMINAL3_CLAIMSPILOT_CONFIRMED_BUG_REPORT.md` for the bug track.
-6. Record the final demo video using `docs/VIDEO-SCRIPT.md`, upload it, and add
+3. Restart/redeploy Render before the final take, warm it, and click `Reset demo`; reset clears claim state and mock-insurer idempotency state.
+4. Add screenshots to `docs/LIVE-PROOF.md` (t3-status, agent, audit `live` rows).
+5. Submit build + `BUGS.md` separately so the product pitch stays clean.
+6. Submit `TERMINAL3_CLAIMSPILOT_CONFIRMED_BUG_REPORT.md` for the bug track.
+7. Record the final demo video using `docs/VIDEO-SCRIPT.md`, upload it, and add
    the YouTube link to the bounty submission form.

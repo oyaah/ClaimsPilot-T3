@@ -1,7 +1,14 @@
 import type { AuditEvent, Claim, Grant } from "./types";
 
-export const DEFAULT_AGENT_DID =
-  process.env.NEXT_PUBLIC_T3_DID ?? "did:t3n:dc851f7daab01b36a986b212e49673c2bc00f904";
+const FALLBACK_AGENT_DID = "did:t3n:dc851f7daab01b36a986b212e49673c2bc00f904";
+
+export function normalizeAgentDid(value?: string): string {
+  const candidate = value?.trim();
+  if (!candidate) return FALLBACK_AGENT_DID;
+  return candidate.startsWith("did:t3n:") ? candidate : `did:t3n:${candidate}`;
+}
+
+export const DEFAULT_AGENT_DID = normalizeAgentDid(process.env.NEXT_PUBLIC_T3_DID);
 
 export const demoClaims: Claim[] = [
   {
@@ -33,8 +40,8 @@ export const demoClaims: Claim[] = [
     status: "open",
     policyStatus: "active",
     identityVerified: true,
-    evidence: ["clinic_invoice.pdf", "diagnosis_code.txt"],
-    summary: "Out-of-network urgent care claim above autonomous payout limit.",
+    evidence: ["device_assessment.pdf", "replacement_quote.pdf"],
+    summary: "Premium phone replacement claim above the autonomous payout limit.",
     destinationHost: "mock-insurer.local",
     piiPlaceholders: [
       "{{profile.first_name}}",

@@ -29,9 +29,9 @@ ClaimsPilot uses the Terminal 3 pattern directly:
 The demo shows:
 
 - approved low-value phone claim
-- blocked high-value medical claim
-- escalation request
-- post-escalation approval
+- blocked high-value phone replacement claim
+- human escalation request that reopens the claim
+- live post-escalation approval
 - revocation
 - audit trail for every attempt
 - T3 status panel for live SDK authentication

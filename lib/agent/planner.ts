@@ -54,7 +54,7 @@ type OpenAiPlanPayload = {
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 
 export function shouldUseLiveAgent(): boolean {
-  return Boolean(process.env.OPENAI_API_KEY?.trim()) && process.env.CLAIMSPILOT_DEMO_MODE !== "true";
+  return Boolean(getOpenAiApiKey()) && process.env.CLAIMSPILOT_DEMO_MODE !== "true";
 }
 
 export async function planAgentActionLive(claim: Claim, grant: Grant): Promise<AgentPlan> {
@@ -62,12 +62,13 @@ export async function planAgentActionLive(claim: Claim, grant: Grant): Promise<A
   if (!shouldUseLiveAgent()) return guardedPlan;
 
   const model = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
+  const apiKey = getOpenAiApiKey();
 
   try {
     const response = await fetch(OPENAI_RESPONSES_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
@@ -170,6 +171,10 @@ function extractJson(value: string): string {
 }
 
 function normalizeAgentError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.replace(/sk-[A-Za-z0-9_-]+/g, "[redacted-openai-key]");
+  void error;
+  return "Live planner unavailable; deterministic policy copy shown.";
+}
+
+function getOpenAiApiKey(): string {
+  return process.env.OPENAI_API_KEY?.replace(/\s+/g, "") ?? "";
 }

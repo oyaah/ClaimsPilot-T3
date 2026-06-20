@@ -50,7 +50,7 @@ ClaimsPilot uses:
 | --- | --- | --- |
 | `CLM-104` phone claim, `$420` | Approved | Inside grant scope |
 | `submit-claim` for `CLM-104` | `PAY-CLM-104`, sanitized | PII resolved through placeholders, not prompt/WASM |
-| `CLM-219` medical claim, `$4,800` | Needs escalation | Agent cannot self-raise authority |
+| `CLM-219` over-limit phone replacement claim, `$4,800` | Needs escalation, then live approval after human escalation | Agent cannot self-raise authority |
 | outbound to `example.com` | Egress denied | User grant controls host access |
 
 ## 5. Where To Inspect Code

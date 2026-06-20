@@ -21,10 +21,10 @@ describe("planAgentAction", () => {
   });
 
   it("uses OpenAI copy without changing the protected decision", async () => {
-    process.env.OPENAI_API_KEY = "sk-test";
+    process.env.OPENAI_API_KEY = "sk-test\n";
     process.env.CLAIMSPILOT_DEMO_MODE = "false";
 
-    vi.stubGlobal("fetch", vi.fn(async () => ({
+    const fetchMock = vi.fn(async () => ({
       ok: true,
       json: async () => ({
         output_text: `\`\`\`json\n${JSON.stringify({
@@ -33,7 +33,8 @@ describe("planAgentAction", () => {
           privateDataHandling: "Only placeholders are used."
         })}\n\`\`\``
       })
-    })));
+    }));
+    vi.stubGlobal("fetch", fetchMock);
 
     const claim = demoClaims.find((item) => item.id === "CLM-219")!;
     const plan = await planAgentActionLive(claim, demoGrant);
@@ -41,6 +42,10 @@ describe("planAgentAction", () => {
     expect(plan.source).toBe("openai");
     expect(plan.title).toBe("Live agent says approve");
     expect(plan.recommendedDecision).toBe("needs_escalation");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.openai.com/v1/responses",
+      expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Bearer sk-test" }) })
+    );
   });
 
   it("falls back when OpenAI is unavailable", async () => {
@@ -53,5 +58,7 @@ describe("planAgentAction", () => {
 
     expect(plan.source).toBe("openai_fallback");
     expect(plan.recommendedDecision).toBe("approved");
+    expect(plan.error).toBe("Live planner unavailable; deterministic policy copy shown.");
+    expect(plan.error).not.toContain("bad key");
   });
 });

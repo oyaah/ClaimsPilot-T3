@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { evaluateClaim, getActiveGrant, listAudit, resetDemoState, revokeGrant } from "./store";
+import {
+  escalateGrantForClaim,
+  evaluateClaim,
+  getActiveGrant,
+  getClaim,
+  listAudit,
+  resetDemoState,
+  revokeGrant
+} from "./store";
 
 describe("demo store", () => {
   beforeEach(() => resetDemoState());
@@ -17,5 +25,12 @@ describe("demo store", () => {
     const result = evaluateClaim("CLM-104");
     expect(result.reasons).toContain("grant_revoked");
   });
-});
 
+  it("reopens an escalated claim for approval under the raised cap", () => {
+    expect(evaluateClaim("CLM-219").decision).toBe("needs_escalation");
+    escalateGrantForClaim("CLM-219");
+
+    expect(getClaim("CLM-219")?.status).toBe("open");
+    expect(evaluateClaim("CLM-219").decision).toBe("approved");
+  });
+});

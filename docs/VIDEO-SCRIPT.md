@@ -1,8 +1,10 @@
 # ClaimsPilot Demo Video Script
 
-Target length: **4-5 minutes**.
+Target length: **6-7 minutes**.
 
 Use this after recording the live app and before uploading the final YouTube link to the bounty form. Do not show `.env.local`, API keys, OTPs, raw profile values, or terminal history containing secrets.
+
+Before the final take, restart/redeploy Render once, warm the service, then click `Reset demo` on Grants. Reset now clears both claim state and the mock insurer idempotency cache, so `CLM-104` returns a clean `queued` result instead of `duplicate_ignored`.
 
 ## Recording Setup
 
@@ -10,7 +12,7 @@ Open these before recording:
 
 | Window | URL / file | Purpose |
 | --- | --- | --- |
-| Browser tab 1 | `https://claimspilot-t3-bounty.vercel.app` | Live frontend |
+| Browser tab 1 | `https://claimspilot-backend.onrender.com` | Canonical live app and state |
 | Browser tab 2 | `https://claimspilot-backend.onrender.com/dashboard/t3-status` | Live T3N status |
 | Browser tab 3 | `https://claimspilot-backend.onrender.com/dashboard/audit` | Live audit proof |
 | Editor tab 1 | `README.md` | Architecture and judge links |
@@ -80,20 +82,25 @@ If the audit row says `duplicate_ignored`, say:
 
 > This says duplicate ignored because the same claim was smoke-tested twice. That is the idempotency guard working; the unique-key proof in `docs/LIVE-PROOF.md` returned `queued`.
 
-## Segment 5 — Denied / Escalated Claim (3:10-3:50)
+## Segment 5 — Escalation And Live Retry (3:10-4:45)
 
 Show:
 
-- Run or point at `CLM-219`.
-- Open audit or explain the result.
+- Run `CLM-219` from the Render command center.
+- Open Audit and show `needs_escalation`, `amount_over_limit`, and mode `live`.
+- Open Grants and click `Escalate for CLM-219`.
+- Return to Command and retry the reopened claim.
+- Return to Audit and show its live approval and placeholder submit rows.
 
 Say:
 
-> Now the medical claim is $4,800. The agent can ask, but it cannot self-approve. The contract returns `needs_escalation` because the amount is over the current grant.
+> Now this phone replacement claim is $4,800, above the current $750 cap. The agent can ask, but it cannot self-approve. The live contract returns `needs_escalation` because the amount is over the current grant.
+>
+> A human operator now raises the application grant envelope to $5,000. That control is app-side; the proof that matters is what happens next. The claim reopens, and the retry returns to the live T3N contract, which now approves it under the raised cap and submits it through the placeholder outbound path.
 >
 > We also proved outbound denial separately: pointing the contract at ungranted `example.com` returns `egress denied`. That matters because egress is authorized by the user grant, not by a static app allowlist.
 
-## Segment 6 — OpenAI Boundary (3:50-4:25)
+## Segment 6 — OpenAI Boundary (4:45-5:25)
 
 Show:
 
@@ -103,7 +110,7 @@ Say:
 
 > OpenAI is used for the claim narrative, not the final decision. It can explain the recommendation, but it cannot override the T3N contract, grant cap, allowed host, or audit outcome.
 
-## Segment 7 — Close (4:25-5:00)
+## Segment 7 — Close (5:25-6:10)
 
 Say:
 

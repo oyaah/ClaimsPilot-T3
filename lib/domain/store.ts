@@ -241,22 +241,31 @@ export async function evaluateClaimWithSource(
   return { ...decision, source, outbound };
 }
 
-export function escalateGrant(maxAmountUsd: number, claimType: Grant["allowedClaimTypes"][number]): Grant {
+export function escalateGrantForClaim(claimId: string): Grant {
   const state = readState();
+  const claim = state.claims.find((row) => row.id === claimId);
+  if (!claim) throw new Error(`Claim not found: ${claimId}`);
+  if (claim.status !== "needs_escalation") {
+    throw new Error(`Claim is not awaiting escalation: ${claimId}`);
+  }
+
+  const maxAmountUsd = Math.max(5000, Math.ceil(claim.amountUsd / 100) * 100);
   state.grant = {
     ...state.grant,
     maxAmountUsd,
-    allowedClaimTypes: Array.from(new Set([...state.grant.allowedClaimTypes, claimType])),
+    allowedClaimTypes: Array.from(new Set([...state.grant.allowedClaimTypes, claim.type])),
     revokedAt: null
   };
+  claim.status = "open";
   appendAudit(state, {
     action: "grant.escalate",
     decision: "approved",
     agentDid: state.grant.agentDid,
+    claimId: claim.id,
     grantId: state.grant.id,
     amountUsd: maxAmountUsd,
     mode: "demo",
-    message: `Grant escalated to $${maxAmountUsd} for ${claimType}.`
+    message: `Human escalation raised the application grant to $${maxAmountUsd} and reopened ${claim.id}.`
   });
   writeState(state);
   return state.grant;

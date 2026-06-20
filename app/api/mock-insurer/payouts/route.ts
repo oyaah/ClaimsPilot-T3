@@ -1,3 +1,4 @@
+import { registerPayout } from "@/lib/domain/mock-insurer";
 import { z } from "zod";
 
 const payoutSchema = z.object({
@@ -16,15 +17,14 @@ const payoutSchema = z.object({
   placeholders: z.array(z.string()).default([])
 });
 
-const paidKeys = new Set<string>();
-
 export async function POST(request: Request) {
   const parsed = payoutSchema.safeParse(await request.json());
   if (!parsed.success) {
     return Response.json({ error: "invalid_payout_request", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  if (paidKeys.has(parsed.data.idempotencyKey)) {
+  const status = registerPayout(parsed.data.idempotencyKey);
+  if (status === "duplicate_ignored") {
     return Response.json({
       status: "duplicate_ignored",
       claimId: parsed.data.claimId,
@@ -32,9 +32,8 @@ export async function POST(request: Request) {
     });
   }
 
-  paidKeys.add(parsed.data.idempotencyKey);
   return Response.json({
-    status: "queued",
+    status,
     claimId: parsed.data.claimId,
     amountUsd: parsed.data.amountUsd,
     payoutReference: `PAY-${parsed.data.claimId}`,

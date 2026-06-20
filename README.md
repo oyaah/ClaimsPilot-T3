@@ -40,8 +40,10 @@ ClaimsPilot shows the safer pattern:
    - U6 proof captured: `PAY-CLM-104`, `sanitized: true`, `piiEchoed: false`.
 3. Open T3 status.
    - Expected: `LIVE`, DID `did:t3n:dc851f7daab01b36a986b212e49673c2bc00f904`, testnet credits.
-4. Run or discuss `CLM-219`, a `$4,800` medical claim.
+4. Run `CLM-219`, a `$4,800` over-limit phone replacement claim.
    - Expected: `needs_escalation` because the agent cannot self-raise its grant.
+5. Escalate the application grant to `$5,000`, then retry `CLM-219`.
+   - Expected: the reopened claim is approved by the live contract under the raised cap.
 5. Review [docs/LIVE-PROOF.md](docs/LIVE-PROOF.md).
    - Shows registered `claims-policy@0.2.0`, approved/escalated live invokes, U6 success, and ungranted-host denial.
 
@@ -128,8 +130,9 @@ Short version:
 2. Show live T3 status.
 3. Show the registered contract and U6 proof in `docs/LIVE-PROOF.md`.
 4. Run `CLM-104` and show approval plus `claim.submit`.
-5. Run or explain `CLM-219` and show escalation.
-6. Close on the core point: the model writes the narrative; T3N controls the action.
+5. Run `CLM-219`, approve the human escalation, and retry the reopened claim.
+6. Show the live post-escalation approval in Audit.
+7. Close on the core point: the model writes the narrative; T3N controls the action.
 
 ## Local Quick Start
 

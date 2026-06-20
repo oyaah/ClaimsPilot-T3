@@ -31,13 +31,15 @@ For the recorded version, use [VIDEO-SCRIPT.md](VIDEO-SCRIPT.md). This file is t
 
 6. Run or discuss `CLM-219`.
    - Expected: needs escalation because `$4,800` exceeds `$750`.
+   - Describe it as an over-limit phone replacement claim, not a medical claim.
    - Say: "The agent can ask, but cannot self-approve."
 
 7. Open Grants and escalate.
-   - Expected: cap moves to at least `$5,000` and medical is added to allowed claim types.
+   - Expected: the application grant cap moves to `$5,000` and `CLM-219` reopens for retry.
+   - Be precise: the human escalation control updates the app policy envelope; the subsequent contract decision is live.
 
 8. Retry the high-value claim.
-   - Expected: approved after explicit escalation.
+   - Expected: approved by the live T3N contract after explicit human escalation.
 
 9. Revoke the agent.
    - Expected: subsequent protected actions are blocked.
