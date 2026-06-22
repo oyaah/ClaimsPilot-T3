@@ -3,10 +3,10 @@ import { ExternalLink, FileCheck2, ShieldCheck } from "lucide-react";
 
 export default function DocsPage() {
   const liveLinks = [
-    ["Live frontend", "https://claimspilot-t3-bounty.vercel.app"],
-    ["Backend proof", "https://claimspilot-backend.onrender.com"],
+    ["Canonical live app", "https://claimspilot-backend.onrender.com"],
     ["T3N status", "https://claimspilot-backend.onrender.com/dashboard/t3-status"],
-    ["Audit proof", "https://claimspilot-backend.onrender.com/dashboard/audit"]
+    ["Audit proof", "https://claimspilot-backend.onrender.com/dashboard/audit"],
+    ["Frontend mirror", "https://claimspilot-t3-bounty.vercel.app"]
   ];
 
   const proofRows = [
@@ -60,11 +60,12 @@ export default function DocsPage() {
       <section className="grid cols-2">
         {[
           ["README.md", "Judge-first overview, live links, architecture, and proof summary."],
-          ["docs/JUDGE-WALKTHROUGH.md", "Shortest path for judges to verify the project."],
-          ["docs/VIDEO-SCRIPT.md", "Four-to-five-minute demo recording script."],
+          ["docs/SUBMISSION.md", "Concise bounty criteria and evidence map."],
           ["docs/TERMINAL3-INTEGRATION.md", "Exact ADK/T3N surfaces used."],
           ["docs/LIVE-PROOF.md", "Captured live contract, placeholder outbound, and egress-denied outputs."],
-          ["BUGS.md", "Reproducible SDK/onboarding findings."]
+          ["docs/DEPLOYMENT.md", "Bounty deployment and insurer-ready production path."],
+          ["BUGS.md", "Index of reproducible SDK/onboarding findings."],
+          ["TERMINAL3_CLAIMSPILOT_CONFIRMED_BUG_REPORT.md", "Detailed bug-bounty evidence and suggested fixes."]
         ].map(([name, detail]) => (
           <div className="panel" key={name}>
             <h3><FileCheck2 size={18} aria-hidden="true" /> {name}</h3>

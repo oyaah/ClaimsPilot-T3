@@ -79,4 +79,5 @@ npm run t3:register   # scripts/t3-register-contract.ts
 npm run t3:invoke     # scripts/t3-invoke-contract.ts
 ```
 
-See `docs/TERMINAL3-INTEGRATION.md` and `docs/LIVE-PROOF.md`.
+See [Terminal 3 integration](../../docs/TERMINAL3-INTEGRATION.md) and
+[live proof](../../docs/LIVE-PROOF.md).

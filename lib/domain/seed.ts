@@ -91,7 +91,7 @@ export const demoGrant: Grant = {
   allowedHosts: ["mock-insurer.local"],
   requiresIdentityVerified: true,
   requiresPolicyActive: true,
-  expiresAt: "2026-06-22T15:59:00.000Z",
+  expiresAt: "2026-07-22T15:59:00.000Z",
   revokedAt: null
 };
 

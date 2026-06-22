@@ -4,9 +4,9 @@
 
 ClaimsPilot is an AI insurance claims adjuster governed by Terminal 3 protected actions. It can inspect claim context and recommend decisions, but payout execution requires scoped grants, a live T3N WASM contract, placeholder private-data substitution, allowed-host egress authorization, and audit logging.
 
-Live app: https://claimspilot-t3-bounty.vercel.app
+Live app: https://claimspilot-backend.onrender.com
 
-Live proof backend: https://claimspilot-backend.onrender.com
+Frontend mirror: https://claimspilot-t3-bounty.vercel.app
 
 ## Problem
 
@@ -43,10 +43,10 @@ The demo shows:
 
 | Criterion | Evidence |
 | --- | --- |
-| Completeness | Live Vercel app, Render Node backend, agent planner, seeded claims, grants UI, audit dashboard, mock insurer API, tests, docs |
+| Completeness | Canonical Render app, Vercel mirror, agent planner, seeded claims, grants UI, audit dashboard, mock insurer API, tests, docs |
 | SDK integration | T3N SDK auth, live DID/credits, `tenant.contracts.register`, `executeAndDecode`, real WASM contract, OTP profile setup, self-grant, `http-with-placeholders` |
 | Creativity | Insurance claims workflow with private last-mile payout execution and visible denial matrix |
-| Trust | The model writes narrative only; T3N controls policy, placeholder resolution, egress, and auditability |
+| Trust | The model writes narrative only; T3N runs the policy contract, resolves placeholders, and enforces outbound egress; ClaimsPilot records source-aware audit rows |
 
 ## Bug Bounty Track
 
