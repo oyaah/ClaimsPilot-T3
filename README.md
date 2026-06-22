@@ -2,7 +2,7 @@
 
 **An insurance-claims AI agent that can investigate and recommend a claim decision — but can never approve a payout or touch a claimant's personal data on its own.** [Terminal 3](https://terminal3.io) (T3N) authenticates the actor, runs the decision contract, resolves private placeholders, and authorizes outbound hosts; ClaimsPilot maintains the human-managed policy envelope and application audit.
 
-The short version: **the agent recommends, the protected-action layer decides.**
+: **the agent recommends, the protected-action layer decides.**
 
 ## Submission links
 
@@ -48,7 +48,7 @@ ClaimsPilot is the middle path. The agent does the useful work — reading the c
                           └───────────────────┬─────────────────────┘
                                               │
               ┌───────────────────────────────┼──────────────────────────────┐
-              │                                │                              │
+              │                               │                              │
    ┌──────────▼──────────┐      ┌──────────────▼─────────────┐    ┌───────────▼──────────┐
    │   OpenAI planner     │      │ Application grant (limit)   │    │  Application audit   │
    │  writes the claim    │      │  cap · claim types · region │    │  every decision,     │
@@ -58,22 +58,22 @@ ClaimsPilot is the middle path. The agent does the useful work — reading the c
               │                                │                              │
               │   recommendation (advice)      │  policy envelope             │ writes rows
               └────────────────┬───────────────┘                              │
-                              │                                              │
+                               │                                              │
                   ┌────────────▼─────────────────────────────────────────────┴───┐
-                  │            Terminal 3 WASM contract (claims-policy@0.2.0)      │
+                  │            Terminal 3 WASM contract (claims-policy@0.2.0)    │
                   │                                                              │
-                  │   evaluate-claim  ── policy only, NO PII ──►  approve /       │
-                  │                                              needs_escalation/ │
-                  │                                              deny             │
+                  │   evaluate-claim  ── policy only, NO PII ──►  approve /      │
+                  │                                              needs_escalation/│
+                  │                                              deny            │
                   │                                                              │
-                  │   submit-claim ──► http-with-placeholders ──► resolves        │
-                  │                    {{profile.*}} inside the enclave           │
+                  │   submit-claim ──► http-with-placeholders ──► resolves       │
+                  │                    {{profile.*}} inside the enclave          │
                   └────────────────────────────┬─────────────────────────────────┘
-                                              │ sanitized payout instruction
+                                               │ sanitized payout instruction
                                   ┌────────────▼────────────┐
                                   │      Insurer API        │
                                   │  returns payout ref,    │
-                                  │  sanitized, no PII echo  │
+                                  │  sanitized, no PII echo │
                                   └─────────────────────────┘
 ```
 
