@@ -294,4 +294,4 @@ What is genuinely real here: live T3N authentication, a registered live WASM con
 - [docs/LIVE-PROOF.md](docs/LIVE-PROOF.md) — captured live outputs
 - [docs/SUBMISSION.md](docs/SUBMISSION.md) — judge-facing one-pager
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — deployment notes
-- [BUGS.md](BUGS.md) — Terminal 3 onboarding/SDK feedback report
+- (TERMINAL3_CLAIMSPILOT_CONFIRMED_BUG_REPORT.md)[BUGS.md]— Terminal 3 onboarding/SDK feedback report
